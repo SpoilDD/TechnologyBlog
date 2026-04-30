@@ -1,3 +1,12 @@
+---
+title: "water"
+description: "卡通渲染"
+pubDate: 2025-02-28
+tags: ["Houdini", "Pipeline"]
+category: pipeline
+icon: "▣"
+---
+
 # 水面渲染
 
 内容基于Unity 2021.2.7f1c1，URP 12.1.2实现。
