@@ -1,0 +1,29 @@
+ta-blog/
+├── public/                          ← 静态资源（图片、favicon）
+│   ├── hero-bg.svg                 ← 首页大图背景
+│   ├── avatar.svg                  ← 头像
+│   └── favicon.svg                 ← 浏览器标签图标
+├── src/
+│   ├── content/
+│   │   └── blog/                   ← 所有文章 .md 都放这里
+│   ├── content.config.ts           ← frontmatter 字段校验
+│   ├── components/                 ← 复用模块
+│   │   ├── Nav.astro              ← 顶部导航
+│   │   ├── Footer.astro           ← 页脚
+│   │   ├── ProfileCard.astro      ← 左侧个人卡
+│   │   ├── NoticeCard.astro       ← 左侧公告栏
+│   │   ├── RecentCard.astro       ← 左侧最新文章
+│   │   ├── PostCard.astro         ← 右侧文章卡
+│   │   └── FilterBar.astro        ← 分类筛选栏
+│   ├── layouts/
+│   │   ├── BaseLayout.astro       ← 全站基础壳子
+│   │   └── PostLayout.astro       ← 文章详情页
+│   ├── pages/
+│   │   ├── index.astro            ← 首页（双栏布局）
+│   │   ├── about.astro            ← 关于页
+│   │   └── blog/[...slug].astro   ← 动态文章路由
+│   └── styles/
+│       └── global.css             ← 全站样式（颜色、字体都在这）
+├── astro.config.mjs               ← Astro 配置
+├── vercel.json                     ← Vercel 部署配置
+└── package.json
