@@ -1,9 +1,11 @@
 ---
 import { getCollection } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
-import FeaturedPost from '../components/FeaturedPost.astro';
-import PostItem from '../components/PostItem.astro';
+import PostCard from '../components/PostCard.astro';
 import FilterBar from '../components/FilterBar.astro';
+import ProfileCard from '../components/ProfileCard.astro';
+import NoticeCard from '../components/NoticeCard.astro';
+import RecentCard from '../components/RecentCard.astro';
 
 const allPosts = (await getCollection('blog')).sort(
   (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf()
@@ -11,54 +13,49 @@ const allPosts = (await getCollection('blog')).sort(
 
 const featured = allPosts.find((p) => p.data.featured);
 const others = allPosts.filter((p) => !p.data.featured);
-
-const totalPosts = allPosts.length;
-const categories = new Set(allPosts.map((p) => p.data.category)).size;
-const earliestYear = allPosts.length
-  ? Math.min(...allPosts.map((p) => p.data.pubDate.getFullYear()))
-  : new Date().getFullYear();
 ---
 <BaseLayout title="// dev.log — 技术美术笔记">
+  <!-- HERO with full-screen background -->
   <header class="hero">
-    <div class="container">
-      <div class="hero-prompt">whoami<span class="blink"></span></div>
+    <div class="hero-content">
+      <div class="hero-prompt">DEV.LOG</div>
       <h1 class="hero-title">写在 <span>渲染</span> 与 <span>工程</span><br />中间的笔记</h1>
       <p class="hero-desc">
         技术美术 / 实时渲染 / Shader 开发 / 工具研发<br />
-        记录一些踩坑、思考与解法。不定期更新。
+        记录一些踩坑、思考与解法
       </p>
-      <div class="hero-stats">
-        <div class="stat-item">
-          <div class="stat-value">{totalPosts}</div>
-          <div class="stat-label">Articles</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-value">{categories}</div>
-          <div class="stat-label">Categories</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-value">{earliestYear}</div>
-          <div class="stat-label">Since</div>
-        </div>
-      </div>
     </div>
+    <div class="hero-scroll">▾</div>
   </header>
 
-  <FilterBar />
+  <!-- TWO-COLUMN LAYOUT -->
+  <div class="container">
+    <div class="layout">
+      <!-- Left sidebar -->
+      <aside class="sidebar">
+        <ProfileCard />
+        <NoticeCard />
+        <RecentCard />
+      </aside>
 
-  <section class="posts">
-    <div class="container">
-      {featured && <FeaturedPost post={featured} />}
+      <!-- Main column -->
+      <main class="main-col">
+        <FilterBar />
 
-      <div class="posts-section-label">Recent Posts</div>
+        {featured && (
+          <>
+            <div class="posts-section-label">置顶</div>
+            <PostCard post={featured} featured={true} />
+          </>
+        )}
 
-      <div class="post-list">
-        {others.map((post) => <PostItem post={post} />)}
-      </div>
+        <div class="posts-section-label">最新文章</div>
+        {others.map((post) => <PostCard post={post} />)}
 
-      <p id="no-results" class="no-results" style="display:none">
-        // 该分类下暂无文章
-      </p>
+        <p id="no-results" class="no-results" style="display:none">
+          // 该分类下暂无文章
+        </p>
+      </main>
     </div>
-  </section>
+  </div>
 </BaseLayout>

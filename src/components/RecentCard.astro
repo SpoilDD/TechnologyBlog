@@ -1,0 +1,22 @@
+---
+import { getCollection } from 'astro:content';
+
+const recent = (await getCollection('blog'))
+  .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
+  .slice(0, 5);
+---
+<div class="card">
+  <div class="card-title">最新文章</div>
+  <div class="recent-list">
+    {recent.map((p) => {
+      const d = p.data.pubDate;
+      const dateStr = `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+      return (
+        <a href={`/blog/${p.id}`} class="recent-item">
+          <div class="recent-title">{p.data.title}</div>
+          <div class="recent-date">{dateStr}</div>
+        </a>
+      );
+    })}
+  </div>
+</div>

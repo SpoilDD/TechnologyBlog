@@ -1,0 +1,39 @@
+---
+import { getCollection } from 'astro:content';
+
+const posts = await getCollection('blog');
+const totalPosts = posts.length;
+const allTags = new Set(posts.flatMap((p) => p.data.tags));
+const totalTags = allTags.size;
+const totalCategories = new Set(posts.map((p) => p.data.category)).size;
+---
+<div class="card profile-card">
+  <div class="avatar">
+    <img src="/avatar.svg" alt="Avatar" />
+  </div>
+  <h2 class="profile-name">Your Name</h2>
+  <p class="profile-slogan">在 Shader 与 Pipeline<br />之间寻找最优解</p>
+
+  <div class="profile-stats">
+    <div class="stat">
+      <span class="stat-value">{totalPosts}</span>
+      <span class="stat-label">文章</span>
+    </div>
+    <div class="stat">
+      <span class="stat-value">{totalTags}</span>
+      <span class="stat-label">标签</span>
+    </div>
+    <div class="stat">
+      <span class="stat-value">{totalCategories}</span>
+      <span class="stat-label">分类</span>
+    </div>
+  </div>
+
+  <div class="profile-links">
+    <a href="https://github.com/yourname" class="profile-link" title="GitHub" target="_blank" rel="noopener">⊹</a>
+    <a href="https://artstation.com/yourname" class="profile-link" title="ArtStation" target="_blank" rel="noopener">◈</a>
+    <a href="https://space.bilibili.com/" class="profile-link" title="Bilibili" target="_blank" rel="noopener">▶</a>
+    <a href="mailto:your@email.com" class="profile-link" title="Email">✉</a>
+    <a href="/rss.xml" class="profile-link" title="RSS">⌁</a>
+  </div>
+</div>

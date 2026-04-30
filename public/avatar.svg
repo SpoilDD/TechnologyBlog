@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <linearGradient id="avbg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0d1f2e"/>
+      <stop offset="100%" stop-color="#001a1f"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="40%" r="50%">
+      <stop offset="0%" stop-color="#00ffd1" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#00ffd1" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="200" height="200" fill="url(#avbg)"/>
+  <circle cx="100" cy="80" r="80" fill="url(#glow)"/>
+  <text x="50%" y="56%" text-anchor="middle" font-family="monospace" font-weight="900"
+        font-size="56" fill="#00ffd1" letter-spacing="2">TA</text>
+  <text x="50%" y="74%" text-anchor="middle" font-family="monospace"
+        font-size="10" fill="#6b6b80" letter-spacing="3">TECHNICAL ARTIST</text>
+</svg>
