@@ -1,0 +1,41 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import BaseLayout from './BaseLayout.astro';
+
+interface Props {
+  post: CollectionEntry<'blog'>;
+}
+
+const { post } = Astro.props;
+const date = post.data.pubDate;
+const dateStr = `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`;
+const readTime = Math.max(1, Math.round((post.body?.length ?? 0) / 600));
+---
+<BaseLayout title={`${post.data.title} · dev.log`} description={post.data.description}>
+  <article class="article container">
+    <header class="article-header">
+      <a href="/" class="article-back">Back to all posts</a>
+      <div class="article-meta">
+        <span>{dateStr}</span>
+        <span class="dot"></span>
+        <span>{readTime} min read</span>
+        <span class="dot"></span>
+        <span>#{post.data.category}</span>
+      </div>
+      <h1 class="article-title">{post.data.title}</h1>
+      <p class="article-desc">{post.data.description}</p>
+      <div class="article-tags">
+        {post.data.tags.map((t) => <span class="tag">{t}</span>)}
+      </div>
+    </header>
+
+    <div class="article-body">
+      <slot />
+    </div>
+
+    <footer class="article-footer">
+      <a href="/">← 返回文章列表</a>
+      <span>感谢阅读 · <a href="mailto:your@email.com">说点什么 →</a></span>
+    </footer>
+  </article>
+</BaseLayout>

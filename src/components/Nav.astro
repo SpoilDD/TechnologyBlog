@@ -1,0 +1,15 @@
+---
+const path = Astro.url.pathname;
+const isHome = path === '/';
+const isAbout = path === '/about' || path === '/about/';
+---
+<nav>
+  <div class="container nav-inner">
+    <a href="/" class="nav-logo">DEV.LOG</a>
+    <ul class="nav-links">
+      <li><a href="/" class:list={[isHome && 'active']}>文章</a></li>
+      <li><a href="/about" class:list={[isAbout && 'active']}>关于</a></li>
+      <li><a href="/rss.xml">RSS</a></li>
+    </ul>
+  </div>
+</nav>

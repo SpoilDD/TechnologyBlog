@@ -1,0 +1,44 @@
+---
+const filters = [
+  { id: 'all', label: 'All' },
+  { id: 'shader', label: 'Shader' },
+  { id: 'pipeline', label: 'Pipeline' },
+  { id: 'tools', label: 'Tools' },
+  { id: 'vfx', label: 'VFX' },
+  { id: 'optimize', label: 'Optimize' },
+];
+---
+<div class="filter-bar">
+  <div class="container">
+    <span class="filter-label">Filter</span>
+    {filters.map((f) => (
+      <button
+        class:list={['filter-tag', f.id === 'all' && 'active']}
+        data-filter={f.id}
+      >
+        {f.label}
+      </button>
+    ))}
+  </div>
+</div>
+
+<script>
+  const tags = document.querySelectorAll<HTMLButtonElement>('.filter-tag');
+  const items = document.querySelectorAll<HTMLElement>('[data-cat]');
+
+  tags.forEach((t) => {
+    t.addEventListener('click', () => {
+      tags.forEach((x) => x.classList.remove('active'));
+      t.classList.add('active');
+      const f = t.dataset.filter;
+      let visibleCount = 0;
+      items.forEach((it) => {
+        const show = f === 'all' || it.dataset.cat === f;
+        it.style.display = show ? '' : 'none';
+        if (show) visibleCount++;
+      });
+      const empty = document.getElementById('no-results');
+      if (empty) empty.style.display = visibleCount === 0 ? 'block' : 'none';
+    });
+  });
+</script>
