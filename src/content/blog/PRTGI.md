@@ -3,7 +3,7 @@ title: "预计算辐照度全局光照(PRTGI)"
 description: "保存场景信息，计算光照用SH传递，保存深度防止漏光"
 pubDate: 2025-05-17
 tags: ["Shader", "Pipeline"]
-category: Shader
+category: shader
 featured: true
 icon: "PRTGI"
 ---

@@ -3,7 +3,7 @@ title: "草的渲染"
 description: "用GPUInstancing去实例化模型草，相机制作RT做交互"
 pubDate: 2023-02-28
 tags: ["Shader", "Pipeline"]
-category: Shader
+category: shader
 icon: "α"
 ---
 [toc]
