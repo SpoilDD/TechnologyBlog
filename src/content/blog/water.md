@@ -1,9 +1,9 @@
 ---
-title: "water"
-description: "卡通渲染"
-pubDate: 2025-02-28
-tags: ["Houdini", "Pipeline"]
-category: pipeline
+title: "贴图水渲染"
+description: "法线贴图计算光照，SSPR制作反射，适合移动端"
+pubDate: 2022-04-11
+tags: ["Shader", "Pipeline"]
+category: Shader
 icon: "▣"
 ---
 
