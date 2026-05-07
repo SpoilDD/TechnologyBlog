@@ -882,15 +882,23 @@ footer.site-footer {
 .article-toc {
   position: fixed;
   top: 8rem;
+  left: auto;
   right: 2rem;
   width: 220px;
-  max-height: calc(100vh - 12rem);
+  max-height: calc(100vh - 10rem);
   overflow-y: auto;
   padding-left: 1rem;
   border-left: 1px solid var(--border);
   font-size: 0.78rem;
   line-height: 1.5;
   z-index: 5;
+}
+
+@media (min-width: 1400px) {
+  .article-toc {
+    right: auto;
+    left: calc(50% + 400px);
+  }
 }
 
 .article-toc-title {
