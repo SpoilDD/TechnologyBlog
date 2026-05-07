@@ -61,7 +61,7 @@ title: "你的文章标题"
 description: "一句话描述，会显示在列表和 SEO meta 里"
 pubDate: 2025-04-30
 tags: ["Shader", "URP"]
-category: shader     # 必须是: shader | pipeline | tools | vfx | optimize
+category: shader     # 必须是: shader | math | optimize
 featured: false      # 是否在首页置顶（建议只设一篇）
 icon: "◈"            # featured 文章封面里显示的字符
 ---
