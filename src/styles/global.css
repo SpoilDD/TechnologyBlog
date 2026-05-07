@@ -878,6 +878,55 @@ footer.site-footer {
   letter-spacing: 0.05em;
 }
 
+/* ─────────  ARTICLE TOC  ───────── */
+.article-toc {
+  position: fixed;
+  top: 8rem;
+  right: 2rem;
+  width: 220px;
+  max-height: calc(100vh - 12rem);
+  overflow-y: auto;
+  padding-left: 1rem;
+  border-left: 1px solid var(--border);
+  font-size: 0.78rem;
+  line-height: 1.5;
+  z-index: 5;
+}
+
+.article-toc-title {
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  color: var(--cyan);
+  margin-bottom: 0.9rem;
+}
+
+.article-toc nav ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.article-toc nav li { margin-bottom: 0.35rem; }
+
+.article-toc nav a {
+  display: block;
+  padding: 0.25rem 0;
+  color: var(--muted);
+  text-decoration: none;
+  border-bottom: none;
+  transition: color 0.2s;
+}
+
+.article-toc nav a:hover { color: var(--cyan); }
+
+.article-toc .toc-h2 { padding-left: 0.9rem; }
+.article-toc .toc-h3 { padding-left: 1.8rem; font-size: 0.72rem; }
+
+@media (max-width: 1280px) {
+  .article-toc { display: none; }
+}
+
 /* ─────────  REVEAL  ───────── */
 .reveal {
   opacity: 0;

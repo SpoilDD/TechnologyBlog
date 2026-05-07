@@ -1,17 +1,34 @@
 ---
 import type { CollectionEntry } from 'astro:content';
+import type { MarkdownHeading } from 'astro';
 import BaseLayout from './BaseLayout.astro';
 
 interface Props {
   post: CollectionEntry<'blog'>;
+  headings?: MarkdownHeading[];
 }
 
-const { post } = Astro.props;
+const { post, headings = [] } = Astro.props;
+const tocHeadings = headings.filter((h) => h.depth >= 1 && h.depth <= 3);
 const date = post.data.pubDate;
 const dateStr = `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`;
 const readTime = Math.max(1, Math.round((post.body?.length ?? 0) / 600));
 ---
 <BaseLayout title={`${post.data.title} · KiteAidan`} description={post.data.description}>
+  {tocHeadings.length > 0 && (
+    <aside class="article-toc" aria-label="Table of contents">
+      <div class="article-toc-title">// CONTENTS</div>
+      <nav>
+        <ul>
+          {tocHeadings.map((h) => (
+            <li class={`toc-h${h.depth}`}>
+              <a href={`#${h.slug}`}>{h.text}</a>
+            </li>
+          ))}
+        </ul>
+      </nav>
+    </aside>
+  )}
   <article class="article container">
     <header class="article-header">
       <a href="/" class="article-back">Back to all posts</a>
