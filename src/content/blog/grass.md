@@ -4,7 +4,7 @@ description: "用GPUInstancing去实例化模型草，相机制作RT做交互"
 pubDate: 2023-02-28
 tags: ["Shader", "Pipeline"]
 category: shader
-icon: "α"
+icon: "🌿"
 ---
 [toc]
 # 思路

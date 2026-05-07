@@ -4,7 +4,7 @@ description: "法线贴图计算光照，SSPR制作反射，适合移动端"
 pubDate: 2022-04-11
 tags: ["Shader", "Pipeline"]
 category: shader
-icon: "▣"
+icon: "☷"
 ---
 
 # 水面渲染
