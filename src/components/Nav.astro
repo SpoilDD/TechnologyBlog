@@ -3,7 +3,7 @@ const path = Astro.url.pathname;
 const isHome = path === '/';
 const isAbout = path === '/about' || path === '/about/';
 ---
-<nav>
+<nav class="site-nav">
   <div class="container nav-inner">
     <a href="/" class="nav-logo">DEV.LOG</a>
     <ul class="nav-links">
