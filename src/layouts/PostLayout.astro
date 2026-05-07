@@ -11,7 +11,7 @@ const date = post.data.pubDate;
 const dateStr = `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`;
 const readTime = Math.max(1, Math.round((post.body?.length ?? 0) / 600));
 ---
-<BaseLayout title={`${post.data.title} · dev.log`} description={post.data.description}>
+<BaseLayout title={`${post.data.title} · KiteAidan`} description={post.data.description}>
   <article class="article container">
     <header class="article-header">
       <a href="/" class="article-back">Back to all posts</a>

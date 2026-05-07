@@ -8,7 +8,7 @@ const blog = defineCollection({
     description: z.string(),
     pubDate: z.coerce.date(),
     tags: z.array(z.string()),
-    category: z.enum(['shader', 'math', 'optimize']),
+    category: z.enum(['shader', 'math', 'optimize', 'tools']),
     featured: z.boolean().default(false),
     icon: z.string().default('◈'),
   }),
