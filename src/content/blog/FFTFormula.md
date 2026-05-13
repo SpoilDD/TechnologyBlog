@@ -84,9 +84,18 @@ $$
 b_n = \frac{1}{\pi} \int_{-\pi}^{\pi} f(x) \sin nxdx
 $$
 
+
+这么看起来其实傅里叶级数就是将一堆的$a_n b_n$通过三角函数变换成最终的函数，而$a_n b_n$在$f(x)$函数里就是振幅频谱。
+
+
 ---
 
 # 傅里叶级数复数形式
+理解$e^{i \theta}$不能以e的指数去理解，要以下去转圈的形势去理解。
+
+
+![](../image/fft/complex.jpg)
+
 
 因为公式有三个不统一，所以引出傅里叶级数复数形式，利用欧拉公式
 
@@ -176,6 +185,9 @@ $$
 1. $c_n = \frac{1}{T} \int_0^T f(t)e^{-in\omega t} dt\ , \ w_0 = \frac{2\pi}{T}$
 2. $f(t) = \sum_{-\infty}^\infty c_n e^{in\omega t}$
 
+根据复数$e^{i\theta}$复指数的定义，$c_n$就是模长， 也就是频谱，因为三角函数还是有相位 振幅 频率，而复指数都整合在一起了。
+
+
 ---
 
 # 傅里叶变换
@@ -199,6 +211,10 @@ $$
 $$
 F(\omega) = \int_{-\infty}^{\infty} f(t)e^{-i\omega t} dt
 $$
+
+傅里叶变换核心就是将时域变换到频域
+
+函数$f(t)$就是时域，而$F(w)$就是频域，那么$f(t)=\frac{1}{2\pi}\int_{-\infty}^{+\infty}F(\omega)e^{i\omega t} d\omega$就是逆傅里叶变换。
 
 ---
 
@@ -233,9 +249,28 @@ $$
 X[k] = \sum_{n=0}^{N-1} x[n]e^{-i\frac{2\pi}{N}kn} , \quad k(0 \le k < N)
 $$
 
+用$W_N^{nk}$代替$e^{-i\frac{2\pi}{N}kn}$，然后两边乘上$W_N^{-mk}$：
+$$
+W_N^{-mk}*X[k] = \sum_{n=0}^{N-1} x[n]W_N^{nk}*W_N^{-mk} = \sum_{n=0}^{N-1} x[n]W_N^{(n-m)k}
+$$
+
+然后对K求和：
+$$
+\sum_{k=0}^{N-1}W_N^{-mk}*X[k]=\sum_{k=0}^{N-1}\sum_{n=0}^{N-1} x[n]W_N^{(n-m)k}
+
+$$
+
+因为正交性$m≠n$时候等于0，不用讨论，而$m=n$的时候$W_N^{0k} = 1$，所以k的求和部分就是N，能n的求和部分只有等m=n的时候有才效果：
+$$
+\sum_{k=0}^{N-1}X[k]*W_N^{-mk}=x[m] * N,  
+$$
+$$
+x[n] = \frac{1}{N}\sum_{k=0}^{N-1}X[k]*W_N^{-nk}
+$$
 ---
 
 # 快速傅里叶变换
+
 计算离散的计算量爆炸，所以想出了FFT，计算量从$O(n^2)$变成了$O(Nlog^2(N))$。首先奇偶分离，周期变成$N/2$，得到$E[k] O[k]$,且用 $W_{N}^{nk} = e^{-i\frac{2\pi}{N}nk}$，由于优化的遍历数所以求和公式变成了$\sum_{n=0}^{N/2-1}$，但是目的还是求N次遍历，所以$W_{N}^{nk}$还是$W_{N}^{nk}$：
 
 $$
@@ -325,3 +360,4 @@ function FFT(x):
     
     return X
 ```
+![FFT 输出](../image/fft/fftout.png)
