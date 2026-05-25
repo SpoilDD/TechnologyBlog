@@ -2,6 +2,7 @@
 import type { CollectionEntry } from 'astro:content';
 import type { MarkdownHeading } from 'astro';
 import BaseLayout from './BaseLayout.astro';
+import Comments from '../components/Comments.astro';
 
 interface Props {
   post: CollectionEntry<'blog'>;
@@ -52,7 +53,9 @@ const readTime = Math.max(1, Math.round((post.body?.length ?? 0) / 600));
 
     <footer class="article-footer">
       <a href="/">← 返回文章列表</a>
-      <span>感谢阅读 · <a href="mailto:your@email.com">说点什么 →</a></span>
+      <span>感谢阅读 · 欢迎在下方评论 ↓</span>
     </footer>
+
+    <Comments />
   </article>
 </BaseLayout>
