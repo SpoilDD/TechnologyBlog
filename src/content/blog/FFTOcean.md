@@ -138,9 +138,12 @@ $$S_{2D}(\mathbf{k}) = S(\omega(k), \theta) \cdot \frac{d\omega}{dk} \cdot \frac
 $$|h_0(\mathbf{k})| = \sqrt{S_{2D}(\mathbf{k})} * dk$$
 
 模糊做相位偏移,$u_1,u_2$是随机数:
-$$h_0(k)=\frac{1}{\sqrt 2}(ξ_r+iξ_i)\sqrt{S_{2D}(k)} \\
-ξ_r = \sqrt {-2lnu_1}*cos(2\pi u_2) \\
-ξ_i = \sqrt {-2lnu_1}*sin(2\pi u_2)$$
+
+$$
+h_0(k)=\frac{1}{\sqrt 2}(ξ_r+iξ_i)\sqrt{S_{2D}(k)} 
+ξ_r = \sqrt {-2lnu_1}*cos(2\pi u_2) 
+ξ_i = \sqrt {-2lnu_1}*sin(2\pi u_2)
+$$
 
 # 代码展示
 
