@@ -169,7 +169,7 @@ S_{PM}(\omega)=\frac{\alpha g^2}{\omega ^5}*exp[{- \frac{5}{4} (\frac{\omega _p}
 $$
 
 $S_{PM}(ω)$代码：
-```HLSL
+```hlsl
 float SpectrumPiersonMoskowitz(float omega, float omega_p)
 {
     if (omega <= 0.0 || omega_p <= 0.0) return 0.0;
