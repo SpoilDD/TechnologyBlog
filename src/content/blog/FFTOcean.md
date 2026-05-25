@@ -121,6 +121,7 @@ $$
 
 # 最后转换
 仔细看就会发现目前都不是在笛卡尔坐标系在的，因为测量海洋的时候就是在频率和极坐标空间下的，所以需要转换到笛卡尔坐标系也就是直角坐标系下，$\omega(k)$,因为$\omega$是由k值计算出来的。
+
 $$S_{2D}(\mathbf{k}) = S(\omega(k), \theta) \cdot \frac{d\omega}{dk} \cdot \frac{1}{k}$$
 
 ```HLSL
@@ -137,7 +138,7 @@ $$S_{2D}(\mathbf{k}) = S(\omega(k), \theta) \cdot \frac{d\omega}{dk} \cdot \frac
 $$|h_0(\mathbf{k})| = \sqrt{S_{2D}(\mathbf{k})} * dk$$
 
 模糊做相位偏移,$u_1,u_2$是随机数:
-$$h_0​(k)=\frac{1}{\sqrt 2}​(ξ_r​+iξ_i​)\sqrt{S_{2D}​(k)​} \\
+$$h_0(k)=\frac{1}{\sqrt 2}(ξ_r+iξ_i)\sqrt{S_{2D}(k)} \\
 ξ_r = \sqrt {-2lnu_1}*cos(2\pi u_2) \\
 ξ_i = \sqrt {-2lnu_1}*sin(2\pi u_2)$$
 
@@ -185,7 +186,7 @@ $$
 
 _Gamma是$γ$外部传参, JONSWAP 峰增强因子代码：
 
-``` C++
+```cpp
 float PeakEnhancementJonswap(float omega, float omega_p)
 {
     if (omega <= 0.0 || omega_p <= 0.0) return 1.0;
@@ -314,7 +315,7 @@ float DirectionalSpreading_dotAbsPow(float2 kHat)
 
 # 动态海洋
 $$
-\hat{h} (\hat{k},t)=\hat{h}_0​(+\hat{k})e^{iωt}+\hat{h}_0^*​(−\hat{k})e^{-iωt}
+\hat{h} (\hat{k},t)=\hat{h}_0(+\hat{k})e^{iωt}+\hat{h}_0^*(−\hat{k})e^{-iωt}
 $$
 
 在上面计算时候讲$w$和$\hat{h}$存储下来，然后加上时间$t$计算，h也是个复数然后乘法直接乘
