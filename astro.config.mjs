@@ -8,6 +8,7 @@ export default defineConfig({
     shikiConfig: {
       theme: 'github-dark-default',
       wrap: true,
+      langs: ['hlsl', 'glsl'],
     },
     remarkPlugins: [remarkMath],
     rehypePlugins: [rehypeKatex],
