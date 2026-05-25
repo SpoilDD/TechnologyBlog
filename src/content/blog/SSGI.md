@@ -123,7 +123,7 @@ RayHit RayMarching(Ray ray, half dither, half3 viewDirectionWS)
 
 &emsp;&emsp; 混合部分（Temporal Reprojection Pass） 用的方法是在RayMarching部分将有间接光的位置用Alpha通道保存下来，每次步进有相交或者能反射环境光Alpha通道就加上 1/步进次数。 然后在Temporal Reprojection Pass里面判断RayMarching保存的Alpha通道数值大于某个值或者值不等于0，就和上一帧的间接光相混合。还可以保存混合帧数的累计，给Poisson Disk Recurrent Denoise Pass用。
 
-``` C++
+```cpp
 half2 velocity = SAMPLE_TEXTURE2D_X_LOD(_MotionVectorTexture, sampler_LinearClamp, screenUV, 0).xy;
 float2 prevUV = screenUV - velocity;
 half historySample = SAMPLE_TEXTURE2D_X_LOD(_SSGIHistorySampleTexture, my_point_clamp_sampler, prevUV, 0).r;
@@ -137,7 +137,7 @@ if (FastSign(currentColor.a) == 1.0)
 ```
 &emsp;&emsp; 要是Alpha通道值为0说明当前帧的该像素是没有间接光的，需要采样上下左右的像素和上一帧像素来判断填充的颜色, 上下左右像素可以限制上一帧颜色不会太跳变。
 
-``` C++
+```cpp
 void AdjustColorBox(inout half3 boxMin, inout half3 boxMax, float2 uv, half currX, half currY)
 {
     half3 color = SampleColorPoint(uv, float2(currX, currY));
@@ -172,7 +172,7 @@ if (FastSign(currentColor.a) == 1.0)
 
 &emsp;&emsp; Poisson Disk Recurrent Denoise Pass降噪的方法是通过 [Fast Denoising with Self Stabilizing Recurrent Blurs](https://developer.download.nvidia.cn/video/gputechconf/gtc/2020/presentations/s22699-fast-denoising-with-self-stabilizing-recurrent-blurs.pdf?t=eyJscyI6ImdzZW8iLCJsc2QiOiJodHRwczpcL1wvd3d3Lmdvb2dsZS5jb20uaGtcLyJ9) 来实现的，这PPT里面会根据Roughness来判断采样的空间，因为间接光部分都是比较平滑的，所以Roughness=1来计算采样的空间了。然后模糊的半径也是根据Roughness和累计的帧数来计算的，目的都是为了不想失去高频信息。间接漫反射的光就是比较平滑的，所以半径就用固定的来计算。
 
-``` C++
+```cpp
 half2x3 GetKernelBasis(half3 N)
 {
     half3x3 basis = GetLocalFrame(N);

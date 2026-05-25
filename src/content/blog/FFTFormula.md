@@ -222,7 +222,7 @@ $$
 
 因为计算机不会积分，所以需要将傅里叶级数改成离散形式的，就是将下面的 $C_n$ 改成离散的：
 
-
+Y
 1. $c_n = \frac{1}{T} \int_0^T f(t)e^{-in\omega t} dt\ , \ w_0 = \frac{2\pi}{T}$
 2. $f(t) = \sum_{-\infty}^{\infty} c_n e^{in\omega t}$
 
@@ -244,13 +244,13 @@ $$
 F(\omega) = \int_{-\infty}^{+\infty} f(t)e^{-i\omega t} dt
 $$
 
-替换进去，$k$ 是频率的索引
+替换进去，$k$ 是频率的索引，得出傅里叶变换：
 
 $$
 X[k] = \sum_{n=0}^{N-1} x[n]e^{-i\frac{2\pi}{N}kn} , \quad k(0 \le k < N)
 $$
 
-用$W_N^{nk}$代替$e^{-i\frac{2\pi}{N}kn}$，然后两边乘上$W_N^{-mk}$：
+用$W_N^{nk}$代替$e^{-i\frac{2\pi}{N}kn}$，然后两边乘上$W_N^{-mk}$，来推导逆傅里叶变换：
 $$
 W_N^{-mk}*X[k] = \sum_{n=0}^{N-1} x[n]W_N^{nk}*W_N^{-mk} = \sum_{n=0}^{N-1} x[n]W_N^{(n-m)k}
 $$
@@ -363,4 +363,6 @@ function FFT(x):
     
     return X
 ```
+
+逆快速傅里叶变换 只需要将$G(k),k H(k)$替换成逆离散傅里叶变换公式就行了
 ![FFT 输出](../image/fft/fftout.png)

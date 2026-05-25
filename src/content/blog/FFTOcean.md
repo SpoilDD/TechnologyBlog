@@ -95,7 +95,7 @@ $$D(\theta) = |\hat{\mathbf{k}} \cdot \hat{\mathbf{w}}|^s$$
 | $\hat{\mathbf{k}} \cdot \hat{\mathbf{w}}$  | 波的方向与风的方向夹角余弦值 $cos(\theta)$ |
 | $s$ | 方向的集中度 |
 
-# k-空间形式（FFT 实现要用）
+# k-空间形式
 
 真实的物理空间是（x,y,z）去表示海浪的位置形状等等，K-空间则是我们说的生成频谱所需要的数值，k的值是复指数空间的向量值$e^{i(k_xx + k_yy)}$。
 
@@ -123,7 +123,7 @@ $$
 仔细看就会发现目前都不是在笛卡尔坐标系在的，因为测量海洋的时候就是在频率和极坐标空间下的，所以需要转换到笛卡尔坐标系也就是直角坐标系下，$\omega(k)$,因为$\omega$是由k值计算出来的。
 $$S_{2D}(\mathbf{k}) = S(\omega(k), \theta) \cdot \frac{d\omega}{dk} \cdot \frac{1}{k}$$
 
-``` C++
+```HLSL
     int nx = int(id.x) - int(_N) / 2;
     int ny = int(id.y) - int(_N) / 2;
 
@@ -134,7 +134,12 @@ $$S_{2D}(\mathbf{k}) = S(\omega(k), \theta) \cdot \frac{d\omega}{dk} \cdot \frac
     float omega = (kMag > 0.0) ? sqrt(G * kMag * tanh(kh)) : 0.0;
 ```
 科学家测量出来的的$S_{2D}(\mathbf{k})$是能量（统计学叫方差）来的，而我们是要计算复振幅$h_0(\mathbf{k})$给IFFT使用：
-$$h_0(\mathbf{k}) = \sqrt{S_{2D}(\mathbf{k})} * k$$
+$$|h_0(\mathbf{k})| = \sqrt{S_{2D}(\mathbf{k})} * dk$$
+
+模糊做相位偏移,$u_1,u_2$是随机数:
+$$h_0​(k)=\frac{1}{\sqrt 2}​(ξ_r​+iξ_i​)\sqrt{S_{2D}​(k)​} \\
+ξ_r = \sqrt {-2lnu_1}*cos(2\pi u_2) \\
+ξ_i = \sqrt {-2lnu_1}*sin(2\pi u_2)$$
 
 # 代码展示
 
@@ -143,7 +148,7 @@ S_{TMA}(ω,h)=S_{PM}(ω)\cdot γ^{r(ω)}\cdot Φ_K(ω,h)
 $$
 
 先计算JONSWAP参数,得到$\alpha$ 和 $\omega _p$
-``` C++
+```HLSL
 void GetJONSWAPParams(out float alpha, out float omegaP)
 {
     float U = max(_WindSpeed, 0.1);
@@ -158,7 +163,7 @@ S_{PM}(\omega)=\frac{\alpha g^2}{\omega ^5}*exp[{- \frac{5}{4} (\frac{\omega _p}
 $$
 
 $S_{PM}(ω)$代码：
-``` C++
+```HLSL
 float SpectrumPiersonMoskowitz(float omega, float omega_p)
 {
     if (omega <= 0.0 || omega_p <= 0.0) return 0.0;
@@ -204,7 +209,7 @@ $$
 
 Kitaigorodskii 水深修正因子
 
-``` C++
+```HLSL
 float PhiKitaigorodskii(float omega, float depth)
 {
     if (omega <= 0.0 || depth <= 0.0) return 0.0;
@@ -225,7 +230,7 @@ $$
 \end{cases}
 $$
 
-``` C++
+```HLSL
     float omega = (kMag > 0.0) ? sqrt(G * kMag * tanh(kh)) : 0.0;
     float kh    = min(kMag * _Depth, 20.0);
     //((1.0 - th * th)) = sech * sech
@@ -235,7 +240,7 @@ $$
 方向谱
 
 $$D(\theta) = |\hat{\mathbf{k}} \cdot \hat{\mathbf{w}}|^s$$
-```C++
+```HLSL
     float kh    = min(kMag * _Depth, 20.0);
     float2 kHat = k / kMag;
 float DirectionalSpreading_dotAbsPow(float2 kHat)
@@ -249,12 +254,143 @@ float DirectionalSpreading_dotAbsPow(float2 kHat)
 }
 ```
 
+```HLSL
+
+     if (id.x >= _N || id.y >= _N) return;
+
+    int nx = int(id.x) - int(_N) / 2;
+    int ny = int(id.y) - int(_N) / 2;
+
+    float dk  = 2.0 * PI / _L;
+    float2 k  = float2(nx, ny) * dk;
+    float  kMag = length(k);
+
+    // Finite-depth dispersion: omega^2 = g k tanh(k h)
+    float kh    = min(kMag * _Depth, 20.0);
+    float omega = (kMag > 0.0) ? sqrt(G * kMag * tanh(kh)) : 0.0;
+    _OmegaK[id.xy] = omega;
+
+    // P_h(k) = S_TMA(omega) * D(theta) * (d omega / d k) / k
+    float p_pos = 0.0;
+    float p_neg = 0.0;
+
+    float th   = tanh(kh);
+    float dwdk = G * (th + kh * (1.0 - th * th)) / max(2.0 * omega, 1e-6);
+    float S    = SpectrumTMA(omega, _Depth, _PeakOmega, _Alpha);
+
+    float2 kHat = k / kMag;
+
+    float Ddir = DirectionalSpreading_dotAbsPow(kHat);
+
+    float dirP = Ddir;
+    float dirN = Ddir;
+
+    // suppression of tiny waves (numerical stability)
+    float damp = exp(-(kMag * _Suppression) * (kMag * _Suppression));
+
+    p_pos = S * dirP * dwdk / kMag * damp;
+    p_neg = S * dirN * dwdk / kMag * damp;
+
+    float ampP = sqrt(max(p_pos, 0.0)) * dk;
+    float ampN = sqrt(max(p_neg, 0.0)) * dk;
+
+    float2 r1 = gaussian(id.xy, 0u);
+    float2 r2 = gaussian(uint2((_N - id.x) % _N, (_N - id.y) % _N), 1u);
+
+    float2 h0p = r1 * ampP * 0.70710678; // 1/sqrt(2)
+    float2 h0n = r2 * ampN * 0.70710678;
+    float2 h0nConj = float2(h0n.x, -h0n.y);
+
+    _H0K[id.xy] = float4(h0p, h0nConj);
+```
+
 | 外部传参  | 含义 |
 | ---  | --- |
 | _WindSpeed | 风的速度 |
 | _Fetch  | 风区 |
-| _Gravity  | 重力加速度 |
-| _PeakOmega  | $w_p$ CPU计算传进来|
-| _PeakOmega  | $w_p$ CPU计算传进来|
+| _Gravity  | 重力加速度 9.8 |
+| _PeakOmega  | $w_p$ CPU计算传进来， 控制基础的浪 一般比较大|
+| _Alpha   | $\alpha$ CPU计算传进来, 再比较大的浪上控制比较小的浪|
 
-[傅里叶公式推导](./FFTFormula.md)
+# 动态海洋
+$$
+\hat{h} (\hat{k},t)=\hat{h}_0​(+\hat{k})e^{iωt}+\hat{h}_0^*​(−\hat{k})e^{-iωt}
+$$
+
+在上面计算时候讲$w$和$\hat{h}$存储下来，然后加上时间$t$计算，h也是个复数然后乘法直接乘
+$$
+(a+bi)(c+si)=\underbrace{ac+bsi^2}_{\text{实部}} + \underbrace{(as+bc)i}_{\text{虚部}}
+$$
+
+```HLSL
+    int nx = int(id.x) - int(_N) / 2;
+    int ny = int(id.y) - int(_N) / 2;
+
+    float dk   = 2.0 * PI / _L;
+    float2 k   = float2(nx, ny) * dk;
+    float  kMag = length(k);
+
+    float4 h0    = _H0K[id.xy];
+    float  omega = _OmegaK[id.xy];
+
+    // exp(iwt) = cos(wt) + i sin(wt)
+    float c = cos(omega * _Time);
+    float s = sin(omega * _Time);
+    
+    // exp(+ i omega t) = c + i s
+    float2 hp = float2(h0.x * c - h0.y * s, h0.x * s + h0.y * c);
+    // exp(- i omega t) applied to h0(-k)*  (h0.zw)
+    float2 hn = float2(h0.z * c - h0.w * (-s), h0.z * (-s) + h0.w * c);
+```
+
+这么做顶点只会上下移动，所以还需要添加一个方向的，这里没有乘$e^{i\vec{k} \cdot \vec{x}}$，在IFFT水平和垂直的时候会一起处理：
+$$\vec{D}(\vec{x}, t) = - \iint \frac{i\vec{k}}{|\vec{k}|} \tilde{h}(\vec{k}, t) e^{i\vec{k} \cdot \vec{x}} d^2k$$
+
+```HLSL
+    float2 kHat = (kMag > 1e-6) ? k / kMag : float2(0.0, 0.0);
+    float2 i_hkt = float2(-hkt.y, hkt.x);    // i * hkt
+
+    float2 dx = kHat.x * i_hkt;
+    float2 dz = kHat.y * i_hkt;
+
+    // pack Dx + i Dz so a single IFFT gives (Re=Dx, Im=Dz)
+    float2 dxdz = float2(dx.x - dz.y, dx.y + dz.x);
+
+    _SpectrumA[id.xy] = float4(hkt, dxdz);
+
+```
+
+[傅里叶公式推导](./FFTFormula.md)得出计算规则：
+* $X(k) = G(k) + W_N^k H(k) , \quad 0 \le k < \frac{N}{2}$
+* $X(k) = G(k - \frac{N}{2}) - W_N^{k - \frac{N}{2}} H(k - \frac{N}{2}) , \quad \frac{N}{2} \le k < N$
+  
+FFT的原理是利用奇偶和类似递归来快速计算，所以需要一个函数先把采样的K的值保存下来，然后在做IFFT的时候就可以直接读取当前像素的K值然后计算。 
+
+```HLSL
+[numthreads(1, 64, 1)]
+void CSPrecomputeTwiddle(uint3 id : SV_DispatchThreadID)
+{
+    uint stage = id.x;
+    uint x     = id.y;
+    if (stage >= _LogN || x >= _N) return;
+
+    uint m              = 1u << (stage + 1u);
+    uint butterflyIndex = x % m;
+
+    // IFFT direction: W = exp(+i * 2*PI * butterflyIndex / m)
+    float angle = 2.0 * PI * float(butterflyIndex) / float(m);
+    float2 W    = float2(cos(angle), sin(angle));
+
+    uint k1, k2;
+    if (butterflyIndex < m / 2u) { k1 = x;            k2 = x + m / 2u; }
+    else                          { k1 = x - m / 2u;   k2 = x;          }
+
+    if (stage == 0u)
+    {
+        k1 = reverseBits(k1, _LogN);
+        k2 = reverseBits(k2, _LogN);
+    }
+
+    _Twiddle[uint2(stage, x)] = float4(W, float(k1), float(k2));
+}
+```

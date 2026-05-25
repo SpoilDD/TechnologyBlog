@@ -26,7 +26,7 @@ icon: "PRTGI"
 </center>
 &emsp;&emsp;直接使用UV生成会像上图左边点分布在上下两端，原因很好理解就是UV集中分布在两级，赤道分布比较分散。 使用下面函数去生成点就会右边一样比较均匀。
 
-``` c++
+```cpp
 float3 UniformSphereSample(float u, float v)
 {
     const float C_PI = 3.14159265359f;
@@ -71,7 +71,7 @@ motion 2D数组贴图
 
 &emsp;&emsp;球谐函数的表达形式有很多种，我用的是直角坐标系的表达式，s是单位方向。
 
-``` C++
+```cpp
 float SHProject(in int l, in int m, in float3 s) 
 { 
     #define k01 0.2820947918    // sqrt(  1/PI)/2
@@ -102,7 +102,7 @@ float SHProject(in int l, in int m, in float3 s)
 ```
 &emsp;&emsp;将每个512分surfel投影到球谐函数中,radiance就是一份的辐射度，4 * PI 因为每份样本都是在球面上采样的，pdf就是1/(4 * pi)，PROBE_SAMPLER_NUM 是512份。
 
-``` C++
+```cpp
 c[0] += SHProject(0, 0, dir) * radiance * 4.0 * PI / PROBE_SAMPLER_NUM;
 c[1] += SHProject(1, -1, dir) * radiance * 4.0 * PI / PROBE_SAMPLER_NUM;
 c[2] += SHProject(1,  0, dir) * radiance * 4.0 * PI / PROBE_SAMPLER_NUM;
@@ -120,7 +120,7 @@ c[8] += SHProject(2,  2, dir) * radiance * 4.0 * PI / PROBE_SAMPLER_NUM;
     <img src="https://learnopengl-cn.github.io/img/07/03/01/ibl_irradiance.png" height=250>
 </center>
 
-``` C++
+```cpp
 float3 irradiance = float3(0.0f, 0.0f, 0.0f);
 float delta = 0.25f / 8.0f;
 float sampleCount = 0.0f; 
@@ -142,7 +142,7 @@ irradiance *= weight;
 ```
 &emsp;&emsp;上面的代码就是用Radiance生成的Irrdiance，可以看出转换的过程相当于成了一个卷积，但是在计算的过程中实时转换的话速度太慢了，需要利用Radiance SH 和Irrdiance SH的关系和带谐函数算出卷积的代替方法，这个推导需要比较深刻的理解球谐函数，最后结果很简单，就是每个阶的球谐函数乘对应的常数就行了。c[9]数组就是保存的9个sh系数，A0、A1、A2就是代替卷积的常数。
 
-``` C++
+```cpp
 float3 IrradianceSH9(in float3 c[9], in float3 dir)
 {
     #define A0 3.1415
@@ -174,7 +174,7 @@ float3 IrradianceSH9(in float3 c[9], in float3 dir)
 
 &emsp;&emsp;上面是没有环境光照和环境光照只反射一次的结果，可以看到在白色物体中有点其他区域反射过来的颜色，也能看到有漏光的现象，因为当前插值是直接三线性插值的结果。三线性插值判断当前着色点附近8个，根据着色点位置和探头位置的比例做混合。利用motion贴图解决漏光的话，rate不用smoothstep做平滑的话，靠近探头附近的着色点会比较亮。
 
-``` C++
+```cpp
 float3 ShowInterpolationFloat3(in float3 value[8], float3 rate)
 {
     float3 a = lerp(value[0], value[4], smoothstep(0, 1, rate.x));    // 000, 100
