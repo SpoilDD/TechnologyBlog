@@ -124,7 +124,7 @@ $$
 
 $$S_{2D}(\mathbf{k}) = S(\omega(k), \theta) \cdot \frac{d\omega}{dk} \cdot \frac{1}{k}$$
 
-```HLSL
+```hlsl
     int nx = int(id.x) - int(_N) / 2;
     int ny = int(id.y) - int(_N) / 2;
 
@@ -154,7 +154,7 @@ S_{TMA}(ω,h)=S_{PM}(ω)\cdot γ^{r(ω)}\cdot Φ_K(ω,h)
 $$
 
 先计算JONSWAP参数,得到$\alpha$ 和 $\omega _p$
-```HLSL
+```hlsl
 void GetJONSWAPParams(out float alpha, out float omegaP)
 {
     float U = max(_WindSpeed, 0.1);
@@ -215,7 +215,7 @@ $$
 
 Kitaigorodskii 水深修正因子
 
-```HLSL
+```hlsl
 float PhiKitaigorodskii(float omega, float depth)
 {
     if (omega <= 0.0 || depth <= 0.0) return 0.0;
@@ -236,7 +236,7 @@ $$
 \end{cases}
 $$
 
-```HLSL
+```hlsl
     float omega = (kMag > 0.0) ? sqrt(G * kMag * tanh(kh)) : 0.0;
     float kh    = min(kMag * _Depth, 20.0);
     //((1.0 - th * th)) = sech * sech
@@ -246,7 +246,7 @@ $$
 方向谱
 
 $$D(\theta) = |\hat{\mathbf{k}} \cdot \hat{\mathbf{w}}|^s$$
-```HLSL
+```hlsl
     float kh    = min(kMag * _Depth, 20.0);
     float2 kHat = k / kMag;
 float DirectionalSpreading_dotAbsPow(float2 kHat)
@@ -260,7 +260,7 @@ float DirectionalSpreading_dotAbsPow(float2 kHat)
 }
 ```
 
-```HLSL
+```hlsl
 
      if (id.x >= _N || id.y >= _N) return;
 
@@ -328,7 +328,7 @@ $$
 (a+bi)(c+si)=\underbrace{ac+bsi^2}_{\text{实部}} + \underbrace{(as+bc)i}_{\text{虚部}}
 $$
 
-```HLSL
+```hlsl
     int nx = int(id.x) - int(_N) / 2;
     int ny = int(id.y) - int(_N) / 2;
 
@@ -352,7 +352,7 @@ $$
 这么做顶点只会上下移动，所以还需要添加一个方向的，这里没有乘$e^{i\vec{k} \cdot \vec{x}}$，在IFFT水平和垂直的时候会一起处理：
 $$\vec{D}(\vec{x}, t) = - \iint \frac{i\vec{k}}{|\vec{k}|} \tilde{h}(\vec{k}, t) e^{i\vec{k} \cdot \vec{x}} d^2k$$
 
-```HLSL
+```hlsl
     float2 kHat = (kMag > 1e-6) ? k / kMag : float2(0.0, 0.0);
     float2 i_hkt = float2(-hkt.y, hkt.x);    // i * hkt
 
@@ -372,7 +372,7 @@ $$\vec{D}(\vec{x}, t) = - \iint \frac{i\vec{k}}{|\vec{k}|} \tilde{h}(\vec{k}, t)
   
 FFT的原理是利用奇偶和类似递归来快速计算，所以需要一个函数先把采样的K的值保存下来，然后在做IFFT的时候就可以直接读取当前像素的K值然后计算。 
 
-```HLSL
+```hlsl
 [numthreads(1, 64, 1)]
 void CSPrecomputeTwiddle(uint3 id : SV_DispatchThreadID)
 {

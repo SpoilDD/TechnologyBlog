@@ -9,6 +9,12 @@ export default defineConfig({
       theme: 'github-dark-default',
       wrap: true,
       langs: ['hlsl', 'glsl'],
+      langAlias: {
+        HLSL: 'hlsl',
+        Hlsl: 'hlsl',
+        GLSL: 'glsl',
+        Glsl: 'glsl',
+      },
     },
     remarkPlugins: [remarkMath],
     rehypePlugins: [rehypeKatex],
