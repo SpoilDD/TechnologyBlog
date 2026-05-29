@@ -6,7 +6,7 @@ const recent = (await getCollection('blog'))
   .slice(0, 5);
 ---
 <div class="card">
-  <div class="card-title">最新文章</div>
+  <div class="card-title">Recent Posts</div>
   <div class="recent-list">
     {recent.map((p) => {
       const d = p.data.pubDate;

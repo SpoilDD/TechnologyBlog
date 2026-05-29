@@ -19,13 +19,11 @@ const others = allPosts.filter((p) => !p.data.featured);
   <header class="hero">
     <div class="hero-content">
       <div class="hero-prompt">Kite.Aidan</div>
-      <h1 class="hero-title">写在 <span>渲染</span> 与 <span>工程</span><br />中间的笔记</h1>
+      <h1 class="hero-title">写在 <span>渲染</span> 与 <span>工程</span> 中间的笔记</h1>
       <p class="hero-desc">
-        数学 / 实时渲染 / Shader 开发 / 工具研发<br />
-        写一些笔记
+        数学 · 实时渲染 · Shader 开发 · 工具研发
       </p>
     </div>
-    <div class="hero-scroll">▾</div>
   </header>
 
   <!-- TWO-COLUMN LAYOUT -->
@@ -53,7 +51,7 @@ const others = allPosts.filter((p) => !p.data.featured);
         {others.map((post) => <PostCard post={post} />)}
 
         <p id="no-results" class="no-results" style="display:none">
-          // 该分类下暂无文章
+          该分类下暂无文章
         </p>
       </main>
     </div>

@@ -147,7 +147,7 @@ h_0(k) &= \frac{1}{\sqrt{2}}(ξ_r + iξ_i)\sqrt{S_{2D}(k)} \\
 \end{aligned}
 $$
 
-# 代码展示
+# TMA初始频谱
 
 $$
 S_{TMA}(ω,h)=S_{PM}(ω)\cdot γ^{r(ω)}\cdot Φ_K(ω,h)
@@ -318,6 +318,49 @@ float DirectionalSpreading_dotAbsPow(float2 kHat)
 | _PeakOmega  | $w_p$ CPU计算传进来， 控制基础的浪 一般比较大|
 | _Alpha   | $\alpha$ CPU计算传进来, 再比较大的浪上控制比较小的浪|
 
+# 预处理IFFT索引
+[傅里叶公式推导](./FFTFormula.md)得出计算规则：
+* $X(k) = G(k) + W_N^k H(k) , \quad 0 \le k < \frac{N}{2}$
+* $X(k) = G(k - \frac{N}{2}) - W_N^{k - \frac{N}{2}} H(k - \frac{N}{2}) , \quad \frac{N}{2} \le k < N$
+  
+FFT的原理是利用奇偶和类似递归来快速计算，所以需要一个函数先把采样的K的值保存下来，然后在做IFFT的时候就可以直接读取当前像素的K值然后计算，用8x8来举例。W就是$e^{i2\pi k}$ 会在IFFT的时候用于动态海洋的变换。
+
+|   |y0| y1 |y2 |y3 |y4 |y5 |y6 |y7  |
+| ---  | --- |--- |--- |--- |--- |--- |--- |--- |
+| x0  | 0,4 |0,4 |2,6 |2,6 | 1,5 |1,5 |3,7 |3,7 |
+| x1  | 0,2 |1,3 |0,2 |1,3 | 4,6 |5,7 |4,6 |5,7 |
+| x2  | 0,4 |1,5 |2,6 |3,7 | 0,4 |1,5 |2,6 |3,7 |
+
+
+```hlsl
+[numthreads(1, 64, 1)]
+void CSPrecomputeTwiddle(uint3 id : SV_DispatchThreadID)
+{
+    uint stage = id.x;
+    uint x     = id.y;
+    if (stage >= _LogN || x >= _N) return;
+
+    uint m              = 1u << (stage + 1u);
+    uint butterflyIndex = x % m;
+
+    // IFFT direction: W = exp(+i * 2*PI * butterflyIndex / m)
+    float angle = 2.0 * PI * float(butterflyIndex) / float(m);
+    float2 W    = float2(cos(angle), sin(angle));
+
+    uint k1, k2;
+    if (butterflyIndex < m / 2u) { k1 = x;            k2 = x + m / 2u; }
+    else                          { k1 = x - m / 2u;   k2 = x;          }
+
+    if (stage == 0u)
+    {
+        k1 = reverseBits(k1, _LogN);
+        k2 = reverseBits(k2, _LogN);
+    }
+
+    _Twiddle[uint2(stage, x)] = float4(W, float(k1), float(k2));
+}
+```
+
 # 动态海洋
 $$
 \hat{h} (\hat{k},t)=\hat{h}_0(+\hat{k})e^{iωt}+\hat{h}_0^*(−\hat{k})e^{-iωt}
@@ -349,8 +392,9 @@ $$
     float2 hn = float2(h0.z * c - h0.w * (-s), h0.z * (-s) + h0.w * c);
 ```
 
-这么做顶点只会上下移动，所以还需要添加一个方向的，这里没有乘$e^{i\vec{k} \cdot \vec{x}}$，在IFFT水平和垂直的时候会一起处理：
-$$\vec{D}(\vec{x}, t) = - \iint \frac{i\vec{k}}{|\vec{k}|} \tilde{h}(\vec{k}, t) e^{i\vec{k} \cdot \vec{x}} d^2k$$
+这么做顶点只会上下移动，所以还需要添加一个方向的：
+
+$$\tilde{D}_x(\mathbf{k}, t) = -i \frac{k_x}{|\mathbf{k}|} \tilde{h}(\mathbf{k}, t), \quad \tilde{D}_z(\mathbf{k}, t) = -i \frac{k_z}{|\mathbf{k}|} \tilde{h}(\mathbf{k}, t)$$
 
 ```hlsl
     float2 kHat = (kMag > 1e-6) ? k / kMag : float2(0.0, 0.0);
@@ -363,40 +407,48 @@ $$\vec{D}(\vec{x}, t) = - \iint \frac{i\vec{k}}{|\vec{k}|} \tilde{h}(\vec{k}, t)
     float2 dxdz = float2(dx.x - dz.y, dx.y + dz.x);
 
     _SpectrumA[id.xy] = float4(hkt, dxdz);
-
 ```
 
-[傅里叶公式推导](./FFTFormula.md)得出计算规则：
-* $X(k) = G(k) + W_N^k H(k) , \quad 0 \le k < \frac{N}{2}$
-* $X(k) = G(k - \frac{N}{2}) - W_N^{k - \frac{N}{2}} H(k - \frac{N}{2}) , \quad \frac{N}{2} \le k < N$
-  
-FFT的原理是利用奇偶和类似递归来快速计算，所以需要一个函数先把采样的K的值保存下来，然后在做IFFT的时候就可以直接读取当前像素的K值然后计算。 
+# IFFT垂直和水平
+这里_Twiddle保存的K值和$w = e^{-i2\pi k}$用来逆傅里叶变换，因为一张贴图不能同时写入和读取，所以用了两张贴图来回存储和读取，复指数的相乘用的都是欧拉公式代替的。
 
 ```hlsl
-[numthreads(1, 64, 1)]
-void CSPrecomputeTwiddle(uint3 id : SV_DispatchThreadID)
+[numthreads(8, 8, 1)]
+void CSFFTHorizontal(uint3 id : SV_DispatchThreadID)
 {
-    uint stage = id.x;
-    uint x     = id.y;
-    if (stage >= _LogN || x >= _N) return;
+    if (id.x >= _N || id.y >= _N) return;
 
-    uint m              = 1u << (stage + 1u);
-    uint butterflyIndex = x % m;
+    float4 bt = _Twiddle[uint2(_Stage, id.x)];
+    float2 W  = bt.xy;
+    uint   k1 = (uint)bt.z;
+    uint   k2 = (uint)bt.w;
 
-    // IFFT direction: W = exp(+i * 2*PI * butterflyIndex / m)
-    float angle = 2.0 * PI * float(butterflyIndex) / float(m);
-    float2 W    = float2(cos(angle), sin(angle));
+    float4 p = readSpectrum(uint2(k1, id.y), _PingPong);
+    float4 q = readSpectrum(uint2(k2, id.y), _PingPong);
 
-    uint k1, k2;
-    if (butterflyIndex < m / 2u) { k1 = x;            k2 = x + m / 2u; }
-    else                          { k1 = x - m / 2u;   k2 = x;          }
+    float2 qrg = float2(W.x * q.x - W.y * q.y, W.x * q.y + W.y * q.x);
+    float2 qba = float2(W.x * q.z - W.y * q.w, W.x * q.w + W.y * q.z);
 
-    if (stage == 0u)
-    {
-        k1 = reverseBits(k1, _LogN);
-        k2 = reverseBits(k2, _LogN);
-    }
-
-    _Twiddle[uint2(stage, x)] = float4(W, float(k1), float(k2));
+    writeSpectrum(id.xy, _PingPong, float4(p.xy + qrg, p.zw + qba));
 }
+
+[numthreads(8, 8, 1)]
+void CSFFTVertical(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= _N || id.y >= _N) return;
+
+    float4 bt = _Twiddle[uint2(_Stage, id.y)];
+    float2 W  = bt.xy;
+    uint   k1 = (uint)bt.z;
+    uint   k2 = (uint)bt.w;
+
+    float4 p = readSpectrum(uint2(id.x, k1), _PingPong);
+    float4 q = readSpectrum(uint2(id.x, k2), _PingPong);
+
+    float2 qrg = float2(W.x * q.x - W.y * q.y, W.x * q.y + W.y * q.x);
+    float2 qba = float2(W.x * q.z - W.y * q.w, W.x * q.w + W.y * q.z);
+
+    writeSpectrum(id.xy, _PingPong, float4(p.xy + qrg, p.zw + qba));
+}
+
 ```

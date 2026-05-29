@@ -4,7 +4,7 @@
 // 到 https://giscus.app 生成你自己的配置
 ---
 <section class="comments">
-  <h3 class="comments-title">// COMMENTS</h3>
+  <h3 class="comments-title">Comments</h3>
   <script
     src="https://giscus.app/client.js"
     data-repo="SpoilDD/TechnologyBlog"
@@ -16,7 +16,7 @@
     data-reactions-enabled="1"
     data-emit-metadata="0"
     data-input-position="bottom"
-    data-theme="noborder_dark"
+    data-theme="dark_dimmed"
     data-lang="zh-CN"
     data-loading="lazy"
     crossorigin="anonymous"
@@ -32,11 +32,13 @@
   }
 
   .comments-title {
-    font-family: var(--font-display);
-    font-size: 0.75rem;
-    letter-spacing: 0.2em;
-    color: var(--cyan);
+    font-family: var(--font-sans);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
     margin-bottom: 1.5rem;
+    font-weight: 600;
   }
 
   /* Giscus iframe 边距 */
