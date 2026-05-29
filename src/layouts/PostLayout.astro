@@ -61,8 +61,14 @@ const readTime = Math.max(1, Math.round((post.body?.length ?? 0) / 600));
 
   <!-- 图片放大灯箱 -->
   <div id="lightbox" class="lightbox" aria-hidden="true">
-    <button class="lightbox-close" aria-label="关闭">×</button>
-    <img class="lightbox-img" src="" alt="" />
+    <button class="lb-btn lb-close" aria-label="关闭">×</button>
+    <button class="lb-btn lb-prev" aria-label="上一张">‹</button>
+    <button class="lb-btn lb-next" aria-label="下一张">›</button>
+    <div class="lb-stage">
+      <img class="lightbox-img" src="" alt="" draggable="false" />
+    </div>
+    <div class="lb-counter"><span class="lb-index">1</span> / <span class="lb-total">1</span></div>
+    <div class="lb-hint">滚轮缩放 · 双击还原 · ← → 切换 · Esc 关闭</div>
   </div>
 </BaseLayout>
 
@@ -70,11 +76,57 @@ const readTime = Math.max(1, Math.round((post.body?.length ?? 0) / 600));
   const lightbox = document.getElementById('lightbox');
   if (lightbox) {
     const lbImg = lightbox.querySelector('.lightbox-img') as HTMLImageElement;
-    const images = document.querySelectorAll<HTMLImageElement>('.article-body img');
+    const stage = lightbox.querySelector('.lb-stage') as HTMLElement;
+    const elIndex = lightbox.querySelector('.lb-index') as HTMLElement;
+    const elTotal = lightbox.querySelector('.lb-total') as HTMLElement;
+    const btnPrev = lightbox.querySelector('.lb-prev') as HTMLButtonElement;
+    const btnNext = lightbox.querySelector('.lb-next') as HTMLButtonElement;
+    const btnClose = lightbox.querySelector('.lb-close') as HTMLButtonElement;
 
-    const open = (src: string, alt: string) => {
-      lbImg.src = src;
-      lbImg.alt = alt;
+    const images = Array.from(
+      document.querySelectorAll<HTMLImageElement>('.article-body img')
+    );
+    const sources = images.map((img) => ({ src: img.currentSrc || img.src, alt: img.alt }));
+
+    const MIN = 1;
+    const MAX = 6;
+    let index = 0;
+    let scale = 1;
+    let tx = 0;
+    let ty = 0;
+
+    // 拖拽状态
+    let dragging = false;
+    let moved = false;
+    let startX = 0;
+    let startY = 0;
+    let startTx = 0;
+    let startTy = 0;
+
+    const apply = () => {
+      lbImg.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+      lbImg.style.cursor = scale > 1 ? 'grab' : 'zoom-in';
+    };
+
+    const resetTransform = () => {
+      scale = 1;
+      tx = 0;
+      ty = 0;
+      apply();
+    };
+
+    const show = (i: number) => {
+      index = (i + sources.length) % sources.length;
+      lbImg.src = sources[index].src;
+      lbImg.alt = sources[index].alt;
+      elIndex.textContent = String(index + 1);
+      resetTransform();
+    };
+
+    const open = (i: number) => {
+      elTotal.textContent = String(sources.length);
+      lightbox.classList.toggle('has-nav', sources.length > 1);
+      show(i);
       lightbox.classList.add('open');
       lightbox.setAttribute('aria-hidden', 'false');
       document.body.style.overflow = 'hidden';
@@ -86,14 +138,92 @@ const readTime = Math.max(1, Math.round((post.body?.length ?? 0) / 600));
       document.body.style.overflow = '';
     };
 
-    images.forEach((img) => {
+    // 围绕某个屏幕坐标缩放，保持该点不动
+    const zoomAt = (clientX: number, clientY: number, next: number) => {
+      const prev = scale;
+      scale = Math.min(MAX, Math.max(MIN, next));
+      if (scale === MIN) {
+        tx = 0;
+        ty = 0;
+      } else {
+        const rect = lbImg.getBoundingClientRect();
+        const cx = clientX - (rect.left + rect.width / 2);
+        const cy = clientY - (rect.top + rect.height / 2);
+        const ratio = scale / prev;
+        tx += cx * (1 - ratio);
+        ty += cy * (1 - ratio);
+      }
+      apply();
+    };
+
+    // 缩略图点击 → 打开
+    images.forEach((img, i) => {
       img.style.cursor = 'zoom-in';
-      img.addEventListener('click', () => open(img.currentSrc || img.src, img.alt));
+      img.addEventListener('click', () => open(i));
     });
 
-    lightbox.addEventListener('click', close);
+    // 控制按钮
+    btnPrev.addEventListener('click', (e) => { e.stopPropagation(); show(index - 1); });
+    btnNext.addEventListener('click', (e) => { e.stopPropagation(); show(index + 1); });
+    btnClose.addEventListener('click', (e) => { e.stopPropagation(); close(); });
+
+    // 键盘
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && lightbox.classList.contains('open')) close();
+      if (!lightbox.classList.contains('open')) return;
+      if (e.key === 'Escape') close();
+      else if (e.key === 'ArrowLeft') show(index - 1);
+      else if (e.key === 'ArrowRight') show(index + 1);
+    });
+
+    // 滚轮缩放（对准鼠标）
+    stage.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const factor = e.deltaY < 0 ? 1.18 : 1 / 1.18;
+      zoomAt(e.clientX, e.clientY, scale * factor);
+    }, { passive: false });
+
+    // 双击：放大↔还原
+    lbImg.addEventListener('dblclick', (e) => {
+      e.stopPropagation();
+      if (scale > 1) resetTransform();
+      else zoomAt(e.clientX, e.clientY, 2.5);
+    });
+
+    // 拖拽平移（鼠标 + 触摸，pointer 统一处理）
+    lbImg.addEventListener('pointerdown', (e) => {
+      if (scale <= 1) return;
+      dragging = true;
+      moved = false;
+      startX = e.clientX;
+      startY = e.clientY;
+      startTx = tx;
+      startTy = ty;
+      lbImg.style.transition = 'none';
+      lbImg.setPointerCapture(e.pointerId);
+    });
+    lbImg.addEventListener('pointermove', (e) => {
+      if (!dragging) return;
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) moved = true;
+      tx = startTx + dx;
+      ty = startTy + dy;
+      lbImg.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+    });
+    const endDrag = () => {
+      if (!dragging) return;
+      dragging = false;
+      lbImg.style.transition = '';
+    };
+    lbImg.addEventListener('pointerup', endDrag);
+    lbImg.addEventListener('pointercancel', endDrag);
+
+    // 点击空白处关闭（拖拽 / 缩放状态下不关闭）
+    lbImg.addEventListener('click', (e) => {
+      if (scale > 1 || moved) e.stopPropagation();
+    });
+    lightbox.addEventListener('click', () => {
+      if (!moved) close();
     });
   }
 </script>
@@ -107,7 +237,7 @@ const readTime = Math.max(1, Math.round((post.body?.length ?? 0) / 600));
     align-items: center;
     justify-content: center;
     padding: 4vmin;
-    background: rgba(0, 0, 0, 0.88);
+    background: rgba(0, 0, 0, 0.9);
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.25s ease;
@@ -119,37 +249,95 @@ const readTime = Math.max(1, Math.round((post.body?.length ?? 0) / 600));
     pointer-events: auto;
   }
 
+  .lb-stage {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    max-width: 100%;
+    max-height: 92vh;
+    overflow: hidden;
+    touch-action: none;
+  }
+
   .lightbox-img {
     max-width: 100%;
     max-height: 92vh;
     object-fit: contain;
     border-radius: 4px;
     box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
-    transform: scale(0.96);
-    transition: transform 0.25s ease;
+    transform-origin: center center;
+    transition: transform 0.15s ease;
+    user-select: none;
+    -webkit-user-drag: none;
   }
 
-  .lightbox.open .lightbox-img {
-    transform: scale(1);
-  }
-
-  .lightbox-close {
+  /* 控制按钮 */
+  .lb-btn {
     position: absolute;
+    background: transparent;
+    border: none;
+    color: #fff;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+    z-index: 2;
+    line-height: 1;
+  }
+
+  .lb-btn:hover { opacity: 1; }
+
+  .lb-close {
     top: 1.2rem;
     right: 1.6rem;
     width: 2.4rem;
     height: 2.4rem;
     font-size: 1.8rem;
-    line-height: 1;
-    color: #fff;
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    opacity: 0.7;
-    transition: opacity 0.2s;
   }
 
-  .lightbox-close:hover {
-    opacity: 1;
+  .lb-prev,
+  .lb-next {
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3rem;
+    height: 3rem;
+    font-size: 2.6rem;
+    display: none;
+  }
+
+  .lb-prev { left: 1rem; }
+  .lb-next { right: 1rem; }
+
+  /* 多图时才显示左右箭头与计数 */
+  .lightbox.has-nav .lb-prev,
+  .lightbox.has-nav .lb-next,
+  .lightbox.has-nav .lb-counter {
+    display: flex;
+  }
+
+  .lb-counter {
+    position: absolute;
+    bottom: 1.4rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: none;
+    gap: 0.25rem;
+    font-family: var(--font-mono, monospace);
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.75);
+    letter-spacing: 0.05em;
+  }
+
+  .lb-hint {
+    position: absolute;
+    bottom: 1.4rem;
+    right: 1.6rem;
+    font-size: 0.68rem;
+    color: rgba(255, 255, 255, 0.4);
+    letter-spacing: 0.03em;
+  }
+
+  @media (max-width: 768px) {
+    .lb-hint { display: none; }
+    .lb-prev, .lb-next { font-size: 2rem; width: 2.4rem; height: 2.4rem; }
   }
 </style>
