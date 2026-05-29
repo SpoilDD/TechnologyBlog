@@ -319,7 +319,7 @@ float DirectionalSpreading_dotAbsPow(float2 kHat)
 | _Alpha   | $\alpha$ CPU计算传进来, 再比较大的浪上控制比较小的浪|
 
 # 预处理IFFT索引
-[傅里叶公式推导](FFTFormula.md)得出计算规则：
+[傅里叶公式推导](/blog/FFTFormula)得出计算规则：
 * $X(k) = G(k) + W_N^k H(k) , \quad 0 \le k < \frac{N}{2}$
 * $X(k) = G(k - \frac{N}{2}) - W_N^{k - \frac{N}{2}} H(k - \frac{N}{2}) , \quad \frac{N}{2} \le k < N$
   
