@@ -370,10 +370,7 @@ body {
   cursor: pointer;
   padding: 1.6rem 0;
   position: relative;
-  transition: padding 0.25s;
 }
-
-.post-card:hover { padding-left: 0.5rem; }
 
 .post-card.featured::before {
   content: 'Featured';
