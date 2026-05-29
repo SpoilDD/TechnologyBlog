@@ -1,5 +1,6 @@
 ---
 import type { CollectionEntry } from 'astro:content';
+import { Image } from 'astro:assets';
 
 interface Props {
   post: CollectionEntry<'blog'>;
@@ -10,23 +11,12 @@ const { post, featured = false } = Astro.props;
 const date = post.data.pubDate;
 const dateStr = `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`;
 const readTime = Math.max(1, Math.round((post.body?.length ?? 0) / 600));
-
-const categoryLabels: Record<string, string> = {
-  shader: 'SHADER',
-  math: 'MATH',
-  optimize: 'OPTIMIZE',
-  tools: 'TOOLS',
-};
 ---
 <a
   href={`/blog/${post.id}`}
   class:list={['post-card', 'reveal', featured && 'featured']}
   data-cat={post.data.category}
 >
-  <div class="post-thumb">
-    <span class="post-thumb-icon">{post.data.icon}</span>
-    <span class="post-thumb-cat">{categoryLabels[post.data.category]}</span>
-  </div>
   <div class="post-info">
     <div class="post-meta">
       <span>{dateStr}</span>
@@ -39,4 +29,14 @@ const categoryLabels: Record<string, string> = {
       {post.data.tags.map((t) => <span class="tag">{t}</span>)}
     </div>
   </div>
+
+  {post.data.cover ? (
+    <div class="post-cover">
+      <Image src={post.data.cover} alt={post.data.title} width={440} densities={[1, 2]} />
+    </div>
+  ) : (
+    <div class="post-cover post-cover--fallback">
+      <span class="post-cover-icon">{post.data.icon}</span>
+    </div>
+  )}
 </a>
