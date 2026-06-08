@@ -4,7 +4,7 @@ description: "理解屏幕空间全局光照的算法流程"
 pubDate: 2025-02-02
 tags: ["Sahder"]
 category: shader
-icon: "SSGI"
+cover: ../image/SSGI/SSGI.gif
 ---
 # SSGI
 
