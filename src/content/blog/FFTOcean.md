@@ -4,7 +4,7 @@ description: "快速傅里叶"
 pubDate: 2025-02-28
 tags: ["Shader"]
 category: shader
-icon: ../image/fft/FFTOcean.gif
+cover: ../image/fft/FFTOcean.gif
 ---
 
 # 海洋公式
