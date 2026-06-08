@@ -7,6 +7,8 @@ category: shader
 cover: ../image/fft/FFTOcean.gif
 ---
 
+![](../image/fft/FFTOcean.gif)
+
 # 海洋公式
 
 海洋公式我们直接学习最完整的TMA，傅里叶变换就是从频谱变换时域，而TMA计算出来的就是频谱，先看看公式：
