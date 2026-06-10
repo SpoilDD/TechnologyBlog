@@ -568,7 +568,23 @@ $$T_v = \left( \frac{\partial \lambda D_x}{\partial v}, \quad \frac{\partial h}{
     float dDzdv = (cU.z - cD.z) / (2.0 * dxStep);
 
     float3 Tu = float3(1.0 + dDxdu, dhdu, dDzdu);
-    float3 Tv = float3(dDxdv,       dhdv, 1.0 + dDzdv);
+    float3 Tv = float3(dDxdv, dhdv, 1.0 + dDzdv);
 
     float3 N = normalize(cross(Tv, Tu));
+```
+
+浪沫的计算是用雅可比行列式来计算的，二维雅可比行列式计算出来的是平行四边形的面积，公式结果是求出平行四边形面积$J = bc - ad$， 逻辑就是用总面积减去边边角角的面积。
+总面积是$(a + b)*(c + d)$，边边角角的面积由两个小三角形和两个大三角和两个矩形组成，小三角形面积$bd$，大三角形面积$ac$，矩形面积$2ad$。得出公式：
+
+$$J = \begin{bmatrix} b & a \\ d & c \end{bmatrix}$$
+$$
+J = ac + ad + bc + bd - bd - ac - 2ad = bc - ad
+$$
+$$J = bc - ad$$
+![alt text](../image/fft/keyabi.jpg)
+
+当面积小于1的时候说明被压缩了，大于等于1说明没有，这样就能算出浪沫了。
+
+```hlsl
+float J = (1.0 + dDxdu) * (1.0 + dDzdv) - dDxdv * dDzdu;
 ```
