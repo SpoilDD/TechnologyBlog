@@ -4,6 +4,7 @@ description: "快速傅里叶"
 pubDate: 2025-02-28
 tags: ["Shader"]
 category: shader
+featured: true
 cover: ../image/fft/FFTOcean.gif
 ---
 
