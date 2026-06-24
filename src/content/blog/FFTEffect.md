@@ -1,11 +1,11 @@
-—
+---
 title: ”1傅里叶公式的推导“
 description: ”从傅里叶级数到傅里叶变换，一步步推导系数与积分形式。“
 pubDate: 2023-02-28
 tags: [”Math“]
 category: math
 icon: ”∑“
-—
+---
 
 # 水面的交互
 
