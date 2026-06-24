@@ -1,10 +1,10 @@
 ---
-title: “FFT交互和水下效果”
-description: “浅水方程和水下后处理实现”
-叶级数到傅里叶变---
-title: ”1傅里叶公式的推导“
-description: ”从傅里叶级数到傅里叶变换，一步步推导系数与积分形式。“
-浅水icon: “FFT”
+title: "FFT交互和水下效果"
+description: "浅水方程和水下后处理实现"
+pubDate: 2023-02-28
+tags: ["Shader"]
+category: math
+icon: "FFT"
 ---
 
 水面的交互主要的原理就是利用NS方程去做计算，但是NS方程计算的比较复杂，则推算出浅水方程。 
