@@ -1,11 +1,11 @@
-—
+—-
 title: ”FFT交互和水下效果“
 description: ”浅水方程和水下后处理实现“
 pubDate: 2023-02-28
 tags: [”Shader“]
 category: math
 icon: ”FFT“
-—
+—-
 
 # 水面的交互
 
