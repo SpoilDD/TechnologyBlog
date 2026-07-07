@@ -1,14 +1,14 @@
 ---
 title: "FFT交互和水下效果"
 description: "浅水方程和水下后处理实现"
-pubDate: 2024-02-28
+pubDate: 2024-03-28
 tags: ["Shader"]
 category: math
-icon: "FFT"
+cover: ../image/fft/FFTWaterInteractive.gif
 ---
 
 # 水面的交互
-
+![alt text](../image/fft/FFTWaterInteractive.gif)
 水面的交互主要的原理就是利用NS方程去做计算，但是NS方程计算的比较复杂，则推算出浅水方程。 浅水方程分成两部分去计算，动量方程和连续方程。
 
 动量方程主要目的就是计算水平运动， 计算的部分u：
@@ -106,7 +106,19 @@ $$
     float fluxY = (dU * sU.z - dD * sD.z) * inv2dx;
     float etaNew = eta - _Dt * (fluxX + fluxY);
 ~~~
-
+最后shader顶点采样的时候只需要用etaNew修改Y值就好了，uNew，vNew的保存下来的目的就是为了计算新的etaNew。
 # 水下的效果
 
-实现水下效果就是判断坐标在水面下面就用后处理处理效果，比如添加焦散、雾效、水上折射等等。判断水下逻辑就是用一个正交摄像机类似拍影子一样去拍水面的深度，将近裁剪面的四个顶点传入到后处理的shader里面，再将坐标转换到正交摄像机的空间下去对比深度。
+实现水下效果就是判断坐标在水面下面就用后处理处理效果，比如添加焦散、雾效、水上折射等等。判断水下逻辑就是用一个正交摄像机类似拍影子一样去拍水面的深度，将近裁剪面的四个顶点传入到后处理的shader里面，再将坐标转换到正交摄像机的空间下去对比深度。场景上可以摆放一个正交摄像机，但是不启用摄像机组件，目的是用来获取拍摄水面深度的变换矩阵且可以可视化控制方位大小。
+<img src="../image/fft/image-4.png" width="48%"> <img src="../image/fft/image-3.png" width="48%">
+
+水下雾效的效果直接按照距离显示就可以了，焦散想要做的好看需要用两张不一样的焦散贴图去做，合成一张采样两次也行然后再做RGB通道偏移。
+<img src="../image/fft/Caustics_1.png" width="30%"> <img src="../image/fft/Caustics_2.png" width="30%">
+```hlsl
+caustics = max(CausticsTex1, CausticsTex2); //采样两次不同速度，然后去最大值就是焦散了。
+```
+最后做一个吃水线，在计算水下遮罩的时候，我们是根据深度差去判断是否在水上水下的，等于0就是水面的位置，所以我们只要abs一下就能得到以水面位置上下的距离了。
+```hlsl
+float signedDepth = FFTOceanWaterlineSignedDepth(positionWS);
+return 1.0 - smoothstep(0.0, 0.005, saturate(abs(signedDepth)));
+```
