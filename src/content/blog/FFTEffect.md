@@ -110,10 +110,10 @@ $$
 # 水下的效果
 
 实现水下效果就是判断坐标在水面下面就用后处理处理效果，比如添加焦散、雾效、水上折射等等。判断水下逻辑就是用一个正交摄像机类似拍影子一样去拍水面的深度，将近裁剪面的四个顶点传入到后处理的shader里面，再将坐标转换到正交摄像机的空间下去对比深度。场景上可以摆放一个正交摄像机，但是不启用摄像机组件，目的是用来获取拍摄水面深度的变换矩阵且可以可视化控制方位大小。
-<img src="../image/fft/image-4.png" width="48%"> <img src="../image/fft/image-3.png" width="48%">
+<img src="/image/fft/image-4.png" width="48%"> <img src="/image/fft/image-3.png" width="48%">
 
 水下雾效的效果直接按照距离显示就可以了，焦散想要做的好看需要用两张不一样的焦散贴图去做，合成一张采样两次也行然后再做RGB通道偏移。
-<img src="../image/fft/Caustics_1.png" width="30%"> <img src="../image/fft/Caustics_2.png" width="30%">
+<img src="/image/fft/Caustics_1.png" width="30%"> <img src="/image/fft/Caustics_2.png" width="30%">
 ```hlsl
 caustics = max(CausticsTex1, CausticsTex2); //采样两次不同速度，然后去最大值就是焦散了。
 ```
