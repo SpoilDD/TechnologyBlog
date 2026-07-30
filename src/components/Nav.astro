@@ -1,6 +1,7 @@
 ---
 const path = Astro.url.pathname;
 const isHome = path === '/';
+const isPhonetics = path === '/phonetics' || path === '/phonetics/';
 const isAbout = path === '/about' || path === '/about/';
 ---
 <nav class="site-nav">
@@ -8,6 +9,7 @@ const isAbout = path === '/about' || path === '/about/';
     <a href="/" class="nav-logo">KiteAidan</a>
     <ul class="nav-links">
       <li><a href="/" class:list={[isHome && 'active']}>文章</a></li>
+      <li><a href="/phonetics" class:list={[isPhonetics && 'active']}>英语音标</a></li>
       <li><a href="/about" class:list={[isAbout && 'active']}>关于</a></li>
       <li><a href="/rss.xml">RSS</a></li>
     </ul>
