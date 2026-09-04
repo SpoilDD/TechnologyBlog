@@ -1,193 +1,145 @@
-import { execFile } from 'node:child_process';
-import { mkdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 
-const execFileAsync = promisify(execFile);
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const dataPath = path.join(rootDir, 'src', 'data', 'phonemes.json');
-const outputRoot = path.join(rootDir, 'public', 'audio', 'phonetics');
-const supportedAccents = ['en-GB', 'en-US'];
-const args = process.argv.slice(2);
-const force = args.includes('--force');
-const dryRun = args.includes('--dry-run');
-const accentArgumentIndex = args.indexOf('--accent');
-const requestedAccent = accentArgumentIndex >= 0 ? args[accentArgumentIndex + 1] : null;
+const phonemeDataPath = path.join(rootDir, 'src', 'data', 'phonemes.json');
+const sourceDataPath = path.join(rootDir, 'src', 'data', 'phoneme-audio-sources.json');
+const resolvedDataPath = path.join(rootDir, 'src', 'data', 'phoneme-audio-resolved.json');
+const publicOutputRoot = path.join(rootDir, 'public', 'audio', 'phonetics');
+const dryRun = process.argv.includes('--dry-run');
+const apiEndpoint = 'https://commons.wikimedia.org/w/api.php';
+const userAgent = 'TechnologyBlogAudioBuilder/1.0 (Wikimedia Commons attribution sync)';
 
-if (accentArgumentIndex >= 0 && !requestedAccent) {
-  throw new Error('--accent 后需要填写 en-GB 或 en-US。');
-}
-
-if (requestedAccent && !supportedAccents.includes(requestedAccent)) {
-  throw new Error(`不支持的口音 ${requestedAccent}，请使用 en-GB 或 en-US。`);
-}
-
-for (const filename of ['.env', '.env.local']) {
-  try {
-    const source = await readFile(path.join(rootDir, filename), 'utf8');
-    for (const line of source.split(/\r?\n/)) {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith('#')) continue;
-      const separator = trimmed.indexOf('=');
-      if (separator < 1) continue;
-      const key = trimmed.slice(0, separator).trim();
-      let value = trimmed.slice(separator + 1).trim();
-      if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
-        value = value.slice(1, -1);
-      }
-      if (!(key in process.env)) process.env[key] = value;
-    }
-  } catch (error) {
-    if (error?.code !== 'ENOENT') throw error;
-  }
-}
-
-const sections = JSON.parse(await readFile(dataPath, 'utf8'));
+const sections = JSON.parse(await readFile(phonemeDataPath, 'utf8'));
+const sourceMap = JSON.parse(await readFile(sourceDataPath, 'utf8'));
 const phonemes = sections.flatMap((section) => section.phonemes);
-const accents = requestedAccent ? [requestedAccent] : supportedAccents;
-const voices = {
-  'en-GB': process.env.ESPEAK_VOICE_EN_GB || 'en-gb',
-  'en-US': process.env.ESPEAK_VOICE_EN_US || 'en-us',
-};
-const speed = Number(process.env.ESPEAK_SPEED || 120);
-const amplitude = Number(process.env.ESPEAK_AMPLITUDE || 170);
+const phonemeById = new Map(phonemes.map((phoneme) => [phoneme.id, phoneme]));
+const sourceEntries = Object.entries(sourceMap);
 
-if (!Number.isFinite(speed) || speed < 80 || speed > 450) {
-  throw new Error('ESPEAK_SPEED 必须是 80 到 450 之间的数字。');
-}
+const missingSources = phonemes.filter((phoneme) => !sourceMap[phoneme.id]).map((phoneme) => phoneme.id);
+const unknownSources = sourceEntries.filter(([id]) => !phonemeById.has(id)).map(([id]) => id);
 
-if (!Number.isFinite(amplitude) || amplitude < 0 || amplitude > 200) {
-  throw new Error('ESPEAK_AMPLITUDE 必须是 0 到 200 之间的数字。');
-}
+if (missingSources.length) throw new Error(`这些音标缺少 Wikimedia 音频映射：${missingSources.join(', ')}`);
+if (unknownSources.length) throw new Error(`音频映射包含未知 ID：${unknownSources.join(', ')}`);
 
-const duplicateIds = phonemes
-  .map((phoneme) => phoneme.id)
-  .filter((id, index, ids) => ids.indexOf(id) !== index);
+const stripFilePrefix = (title) => title.replace(/^File:/i, '');
+const cleanMetadata = (value = '') => String(value)
+  .replace(/<[^>]*>/g, ' ')
+  .replace(/&nbsp;/g, ' ')
+  .replace(/&amp;/g, '&')
+  .replace(/&quot;/g, '"')
+  .replace(/&#039;/g, "'")
+  .replace(/\s+/g, ' ')
+  .trim();
 
-if (duplicateIds.length) throw new Error(`音标音频 ID 重复：${[...new Set(duplicateIds)].join(', ')}`);
-
-for (const phoneme of phonemes) {
-  for (const accent of supportedAccents) {
-    if (!phoneme.espeak?.[accent]) throw new Error(`${phoneme.id} 缺少 ${accent} 的 eSpeak 音素映射。`);
+const remoteByFilename = new Map();
+for (let index = 0; index < sourceEntries.length; index += 20) {
+  const batch = sourceEntries.slice(index, index + 20);
+  const params = new URLSearchParams({
+    action: 'query',
+    format: 'json',
+    formatversion: '2',
+    origin: '*',
+    prop: 'videoinfo',
+    viprop: 'url|mime|size|extmetadata|derivatives',
+    titles: batch.map(([, source]) => `File:${source.file}`).join('|'),
+  });
+  const response = await fetch(`${apiEndpoint}?${params}`, { headers: { 'User-Agent': userAgent } });
+  if (!response.ok) throw new Error(`Wikimedia Commons API 请求失败：HTTP ${response.status}`);
+  const payload = await response.json();
+  for (const page of payload.query?.pages ?? []) {
+    if (page.missing || !page.videoinfo?.[0]) continue;
+    remoteByFilename.set(stripFilePrefix(page.title), page.videoinfo[0]);
   }
 }
 
-const jobs = accents.flatMap((accent) =>
-  phonemes.map((phoneme) => ({
-    accent,
-    voice: voices[accent],
-    phoneme,
-    outputPath: path.join(outputRoot, accent, `${phoneme.id}.wav`),
-  })),
-);
+const missingRemoteFiles = sourceEntries
+  .filter(([, source]) => !remoteByFilename.has(source.file))
+  .map(([, source]) => source.file);
+if (missingRemoteFiles.length) {
+  throw new Error(`Wikimedia Commons 上找不到这些文件：\n- ${missingRemoteFiles.join('\n- ')}`);
+}
+
+const missingTranscodes = sourceEntries
+  .filter(([, source]) => !remoteByFilename.get(source.file)?.derivatives?.some((item) => item.type === 'audio/mpeg'))
+  .map(([, source]) => source.file);
+if (missingTranscodes.length) {
+  throw new Error(`这些 Wikimedia 音频暂时没有 MP3 转码：\n- ${missingTranscodes.join('\n- ')}`);
+}
 
 if (dryRun) {
-  console.log(`配置校验通过：${phonemes.length} 个音标，${jobs.length} 个离线音频任务。`);
-  for (const accent of accents) console.log(`${accent}: ${voices[accent]} → public/audio/phonetics/${accent}/`);
+  const wordSamples = sourceEntries.filter(([, source]) => source.sample === 'word').length;
+  console.log(`配置校验通过：${sourceEntries.length} 个 Wikimedia Commons 真人音频，其中 ${wordSamples} 个双元音采用最短示例词。`);
   process.exit(0);
 }
 
-const executableCandidates = [
-  process.env.ESPEAK_NG_PATH,
-  process.platform === 'win32' ? path.join(process.env.ProgramFiles || 'C:\\Program Files', 'eSpeak NG', 'espeak-ng.exe') : null,
-  process.platform === 'win32' ? path.join(process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)', 'eSpeak NG', 'espeak-ng.exe') : null,
-  'espeak-ng',
-  'espeak',
-].filter(Boolean);
+const files = sourceEntries.map(([id, source]) => {
+  const remote = remoteByFilename.get(source.file);
+  const mp3 = remote.derivatives.find((item) => item.type === 'audio/mpeg');
+  const metadata = remote.extmetadata ?? {};
+  return {
+    id,
+    ipa: phonemeById.get(id).ipa,
+    url: mp3.src,
+    sourceFile: source.file,
+    sourcePage: remote.descriptionurl,
+    sample: source.sample,
+    sampleLabel: source.sampleLabel ?? null,
+    author: cleanMetadata(metadata.Artist?.value) || '见文件说明页',
+    license: cleanMetadata(metadata.LicenseShortName?.value) || cleanMetadata(metadata.UsageTerms?.value) || '见文件说明页',
+    licenseUrl: metadata.LicenseUrl?.value || remote.descriptionurl,
+  };
+});
 
-let executable;
-let version = '';
-
-for (const candidate of [...new Set(executableCandidates)]) {
-  try {
-    const result = await execFileAsync(candidate, ['--version'], { windowsHide: true, encoding: 'utf8' });
-    executable = candidate;
-    const firstLine = `${result.stdout || ''}${result.stderr || ''}`.trim().split(/\r?\n/)[0];
-    version = firstLine.split(/\s+Data at:/i)[0];
-    break;
-  } catch {
-    // Try the next common executable location.
-  }
-}
-
-if (!executable) {
-  throw new Error(
-    '未找到 eSpeak NG。Windows 请先运行：winget install --id eSpeak-NG.eSpeak-NG --exact；也可以在 .env 中设置 ESPEAK_NG_PATH。',
-  );
-}
-
-console.log(`使用 ${version || 'eSpeak NG'} 生成 WAV。`);
-
-const synthesize = async (job) => {
-  if (!force) {
-    try {
-      const existing = await stat(job.outputPath);
-      if (existing.size > 44) return { status: 'skipped', job };
-    } catch (error) {
-      if (error?.code !== 'ENOENT') throw error;
-    }
-  }
-
-  await mkdir(path.dirname(job.outputPath), { recursive: true });
-  const temporaryPath = `${job.outputPath}.${process.pid}.tmp.wav`;
-
-  try {
-    await execFileAsync(
-      executable,
-      [
-        '-v', job.voice,
-        '-s', String(speed),
-        '-a', String(amplitude),
-        '-p', '50',
-        '-z',
-        '-w', temporaryPath,
-        `[[${job.phoneme.espeak[job.accent]}]]`,
-      ],
-      { windowsHide: true, encoding: 'utf8' },
-    );
-
-    const generated = await stat(temporaryPath);
-    if (generated.size <= 44) throw new Error('eSpeak NG 返回的 WAV 文件为空。');
-    await rm(job.outputPath, { force: true });
-    await rename(temporaryPath, job.outputPath);
-    return { status: 'generated', job, bytes: generated.size };
-  } catch (error) {
-    await rm(temporaryPath, { force: true });
-    const detail = String(error?.stderr || error?.message || error).trim();
-    throw new Error(`${job.accent} /${job.phoneme.ipa}/ 生成失败：${detail}`);
-  }
-};
-
-const concurrency = 2;
-const results = [];
-let cursor = 0;
-
-const worker = async () => {
-  while (cursor < jobs.length) {
-    const job = jobs[cursor];
-    cursor += 1;
-    const result = await synthesize(job);
-    results.push(result);
-    const marker = result.status === 'generated' ? '生成' : '跳过';
-    console.log(`[${results.length}/${jobs.length}] ${marker} ${job.accent} /${job.phoneme.ipa}/`);
-  }
-};
-
-await Promise.all(Array.from({ length: Math.min(concurrency, jobs.length) }, worker));
+const resolvedData = Object.fromEntries(files.map((file) => [file.id, {
+  file: file.sourceFile,
+  url: file.url,
+  sourcePage: file.sourcePage,
+  sample: file.sample,
+  sampleLabel: file.sampleLabel,
+} ]));
 
 const manifest = {
-  provider: 'eSpeak NG (offline)',
-  generatedAt: new Date().toISOString(),
-  version,
-  outputFormat: 'WAV',
-  speed,
-  amplitude,
-  accents: Object.fromEntries(accents.map((accent) => [accent, { voice: voices[accent], count: phonemes.length }])),
+  provider: 'Wikimedia Commons',
+  syncedAt: new Date().toISOString(),
+  delivery: 'Wikimedia official MP3 transcodes, streamed on demand',
+  count: files.length,
+  isolatedOrIpaSamples: files.filter((file) => file.sample === 'ipa').length,
+  shortWordSamples: files.filter((file) => file.sample === 'word').length,
+  files,
 };
 
-await mkdir(outputRoot, { recursive: true });
-await writeFile(path.join(outputRoot, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
+const escapeHtml = (value) => String(value)
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#039;');
 
-const generatedCount = results.filter((result) => result.status === 'generated').length;
-console.log(`完成：生成 ${generatedCount} 个，复用 ${results.length - generatedCount} 个。无需云服务或银行卡。`);
+const attributionItems = files.map((file) => {
+  const sampleNote = file.sample === 'word' ? `；短示例词：${escapeHtml(file.sampleLabel)}` : '';
+  return `<li><strong>/${escapeHtml(file.ipa)}/</strong> — <a href="${escapeHtml(file.sourcePage)}">${escapeHtml(file.sourceFile)}</a>；作者：${escapeHtml(file.author)}；许可：<a href="${escapeHtml(file.licenseUrl)}">${escapeHtml(file.license)}</a>${sampleNote}</li>`;
+}).join('\n');
+
+const attributionHtml = `<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>英语音标音频来源与许可</title>
+  <style>body{max-width:960px;margin:0 auto;padding:40px 22px;background:#0b100f;color:#dce9e4;font:16px/1.75 system-ui,sans-serif}h1{color:#a7f3d0}a{color:#58d6a7}li{margin:.7rem 0}.note{color:#9aa9a4}</style>
+</head>
+<body>
+  <h1>英语音标音频来源与许可</h1>
+  <p class="note">全部音频由 Wikimedia Commons 官方 MP3 转码地址按需播放。每个文件遵循其说明页标注的独立许可证；本站未剪辑音频。少数没有独立录音的双元音使用极短真人示例词。</p>
+  <ol>${attributionItems}</ol>
+</body>
+</html>\n`;
+
+await mkdir(publicOutputRoot, { recursive: true });
+await writeFile(resolvedDataPath, `${JSON.stringify(resolvedData, null, 2)}\n`, 'utf8');
+await writeFile(path.join(publicOutputRoot, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
+await writeFile(path.join(publicOutputRoot, 'attribution.html'), attributionHtml, 'utf8');
+
+console.log(`完成：已同步 ${files.length} 个 Wikimedia 真人音频地址及其来源与许可证。无需账号、密钥或银行卡。`);

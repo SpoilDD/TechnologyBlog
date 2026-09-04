@@ -1,15 +1,23 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import phonemeData from '../data/phonemes.json';
+import phonemeAudioData from '../data/phoneme-audio-resolved.json';
 
 type Phoneme = {
   id: string;
   ipa: string;
-  espeak: Record<'en-GB' | 'en-US', string>;
   word: string;
   transcription: string;
   hint: string;
   family: string;
+};
+
+type AudioSource = {
+  file: string;
+  url: string;
+  sourcePage: string;
+  sample: 'ipa' | 'word';
+  sampleLabel: string | null;
 };
 
 type PhonemeSection = {
@@ -22,6 +30,7 @@ type PhonemeSection = {
 };
 
 const sections = phonemeData as PhonemeSection[];
+const audioSources = phonemeAudioData as Record<string, AudioSource>;
 ---
 
 <BaseLayout title="英语音标发音练习 · KiteAidan" description="48 个英语国际音标互动发音表，点击音标听单独发音。">
@@ -38,7 +47,7 @@ const sections = phonemeData as PhonemeSection[];
       <div class="hero-copy">
         <p class="kicker"><span></span> INTERACTIVE IPA LAB</p>
         <h1>听见每一个<br /><em>英语音标</em></h1>
-        <p class="hero-intro">48 个常用英语国际音标。点击任意卡片，直接听音标本身、辨别口型，再开口模仿。</p>
+        <p class="hero-intro">48 个常用英语国际音标。点击任意卡片，听 Wikimedia Commons 的真人 IPA 示例，辨别口型，再开口模仿。</p>
         <div class="hero-stats" aria-label="音标数量统计">
           <div><strong>20</strong><span>元音</span></div>
           <div><strong>28</strong><span>辅音</span></div>
@@ -64,19 +73,13 @@ const sections = phonemeData as PhonemeSection[];
           <button class="filter-button" type="button" data-filter="consonants" aria-pressed="false">辅音</button>
         </div>
         <label class="select-wrap">
-          <span>口音</span>
-          <select id="accent-select" aria-label="选择发音口音">
-            <option value="en-GB">英音</option>
-            <option value="en-US">美音</option>
-          </select>
-        </label>
-        <label class="select-wrap">
           <span>语速</span>
           <select id="speed-select" aria-label="选择发音速度">
             <option value="0.75">慢速</option>
             <option value="1" selected>正常</option>
           </select>
         </label>
+        <a class="credit-link" href="/audio/phonetics/attribution.html" target="_blank" rel="noreferrer">来源与许可</a>
       </div>
     </section>
 
@@ -97,7 +100,8 @@ const sections = phonemeData as PhonemeSection[];
                 class="phoneme-card"
                 type="button"
                 data-ipa={phoneme.ipa}
-                data-audio-id={phoneme.id}
+                data-audio-src={audioSources[phoneme.id].url}
+                data-sample-label={audioSources[phoneme.id].sample === 'word' ? `真人示例词 ${audioSources[phoneme.id].sampleLabel}` : '真人 IPA 示例'}
                 aria-label={`播放音标 ${phoneme.ipa}`}
               >
                 <span class="card-topline">
@@ -124,14 +128,13 @@ const sections = phonemeData as PhonemeSection[];
       <span class="note-number">TIP / 01</span>
       <div>
         <h2>先听单独音标，再对照示例词</h2>
-        <p>卡片播放的是由 IPA 指定的独立音标；下方示例词帮助你理解它在真实单词中的位置。先慢速听两遍，再跟读并录下自己的声音作比较。</p>
+        <p>卡片优先播放 Wikimedia Commons 的真人 IPA 录音；Commons 暂无独立录音的少数双元音会播放含目标音的极短示例词。先慢速听两遍，再跟读并录下自己的声音作比较。</p>
       </div>
     </aside>
   </main>
 
   <script>
     const speechStatus = document.querySelector<HTMLElement>('#speech-status');
-    const accentSelect = document.querySelector<HTMLSelectElement>('#accent-select');
     const speedSelect = document.querySelector<HTMLSelectElement>('#speed-select');
     const cards = Array.from(document.querySelectorAll<HTMLButtonElement>('.phoneme-card'));
     const filterButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('.filter-button'));
@@ -156,21 +159,21 @@ const sections = phonemeData as PhonemeSection[];
 
     const playPhoneme = (card: HTMLButtonElement) => {
       const ipa = card.dataset.ipa ?? '';
-      const audioId = card.dataset.audioId ?? '';
+      const audioSrc = card.dataset.audioSrc ?? '';
+      const sampleLabel = card.dataset.sampleLabel ?? '真人 IPA 示例';
       stopPlayback();
-      const accent = accentSelect?.value ?? 'en-GB';
       activeCard = card;
       card.classList.add('playing');
-      if (speechStatus) speechStatus.textContent = `正在加载 /${ipa}/ · ${accent === 'en-GB' ? '英音' : '美音'}`;
+      if (speechStatus) speechStatus.textContent = `正在加载 /${ipa}/ · Wikimedia 真人录音`;
 
-      const audio = new Audio(`/audio/phonetics/${accent}/${audioId}.wav`);
+      const audio = new Audio(audioSrc);
       let failed = false;
       activeAudio = audio;
       audio.preload = 'auto';
       audio.playbackRate = Number(speedSelect?.value ?? 1);
       audio.preservesPitch = true;
       audio.onplaying = () => {
-        if (activeAudio === audio && speechStatus) speechStatus.textContent = `/${ipa}/ · ${accent === 'en-GB' ? '英音' : '美音'}`;
+        if (activeAudio === audio && speechStatus) speechStatus.textContent = `/${ipa}/ · ${sampleLabel}`;
       };
       audio.onended = () => {
         if (activeAudio === audio) activeAudio = null;
@@ -182,7 +185,7 @@ const sections = phonemeData as PhonemeSection[];
         audio.pause();
         activeAudio = null;
         finishPlayback(card);
-        if (speechStatus) speechStatus.textContent = `/${ipa}/ 音频不可用 · 请先运行音频生成命令`;
+        if (speechStatus) speechStatus.textContent = `/${ipa}/ 音频不可用 · 请先下载 Wikimedia 音频`;
       };
       audio.onerror = showAudioError;
       audio.play().catch(showAudioError);
@@ -465,6 +468,16 @@ const sections = phonemeData as PhonemeSection[];
     font: inherit;
     font-size: 0.76rem;
   }
+
+  .credit-link {
+    color: var(--mint-strong);
+    font-size: 0.72rem;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .credit-link:hover,
+  .credit-link:focus-visible { text-decoration: underline; }
 
   .phoneme-sections {
     display: grid;

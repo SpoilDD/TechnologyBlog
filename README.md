@@ -18,36 +18,25 @@ npm run build
 npm run preview
 ```
 
-## 生成英语音标发音
+## 同步英语音标发音来源
 
-`/phonetics` 页面播放 eSpeak NG 离线合成的独立音标 WAV。生成过程不需要云服务、账号、密钥或银行卡。
+`/phonetics` 页面按需播放 [Wikimedia Commons](https://commons.wikimedia.org/) 的开放许可真人 IPA 示例（官方 MP3 转码）。不需要云服务账号、密钥或银行卡，也不会把一批大音频文件放进 Git 仓库。
 
-1. 安装开源的 [eSpeak NG](https://github.com/espeak-ng/espeak-ng)。Windows 可以直接运行：
-
-```bash
-winget install --id eSpeak-NG.eSpeak-NG --exact
-```
-
-2. 生成英音、美音两套音频：
+同步 48 个音标的播放地址、作者与许可证：
 
 ```bash
 npm run audio:phonetics
 ```
 
-生成结果位于 `public/audio/phonetics/en-GB/` 和 `public/audio/phonetics/en-US/`。已有文件默认复用；需要全部重新生成时运行：
+只校验 48 个音标与 Commons 文件是否匹配：
 
 ```bash
-npm run audio:phonetics -- --force
-```
-
-也可以只生成一种口音，或只校验 48 个音标配置：
-
-```bash
-npm run audio:phonetics -- --accent en-GB
 npm run audio:phonetics:check
 ```
 
-首次部署前可用 `npm run build:with-audio` 先生成音频再构建网站。常规部署建议提交生成后的 WAV，再继续使用 `npm run build`；服务器不需要安装 eSpeak NG。
+首次部署前可用 `npm run build:with-audio` 先同步来源再构建网站。常规部署直接使用 `npm run build` 即可。播放地址写入 `src/data/phoneme-audio-resolved.json`，来源、作者和许可证写入 `public/audio/phonetics/attribution.html` 与 `manifest.json`。
+
+Wikimedia 标准 IPA 表没有全部英语双元音的独立录音，因此少数双元音采用 Commons 上含目标音的极短真人示例词；页面播放时会明确显示示例词名称。
 
 ## 项目结构
 
