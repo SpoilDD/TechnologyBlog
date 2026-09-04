@@ -18,6 +18,33 @@ npm run build
 npm run preview
 ```
 
+## 生成英语音标发音
+
+`/phonetics` 页面优先播放 Azure Speech 根据 IPA 合成的独立音标 MP3。密钥只在本地生成阶段使用，不会发送到浏览器。
+
+1. 在 Azure 创建 Speech 资源。
+2. 复制 `.env.example` 为 `.env`，填写资源密钥与区域。
+3. 生成英音、美音两套音频：
+
+```bash
+npm run audio:phonetics
+```
+
+生成结果位于 `public/audio/phonetics/en-GB/` 和 `public/audio/phonetics/en-US/`。已有文件默认复用；需要全部重新生成时运行：
+
+```bash
+npm run audio:phonetics -- --force
+```
+
+也可以只生成一种口音，或在不调用 Azure 的情况下校验 48 个音标配置：
+
+```bash
+npm run audio:phonetics -- --accent en-GB
+npm run audio:phonetics:check
+```
+
+首次部署前可用 `npm run build:with-audio` 先生成音频再构建网站。常规部署建议提交生成后的 MP3，再继续使用 `npm run build`，避免每次部署重复调用 TTS。
+
 ## 项目结构
 
 ```

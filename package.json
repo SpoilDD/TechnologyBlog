@@ -5,6 +5,9 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
+    "build:with-audio": "node scripts/generate-phonetic-audio.mjs && astro build",
+    "audio:phonetics": "node scripts/generate-phonetic-audio.mjs",
+    "audio:phonetics:check": "node scripts/generate-phonetic-audio.mjs --dry-run",
     "preview": "astro preview",
     "astro": "astro"
   },

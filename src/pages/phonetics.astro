@@ -1,8 +1,11 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import phonemeData from '../data/phonemes.json';
 
 type Phoneme = {
+  id: string;
   ipa: string;
+  speech: Record<'en-GB' | 'en-US', string>;
   word: string;
   transcription: string;
   hint: string;
@@ -18,86 +21,10 @@ type PhonemeSection = {
   phonemes: Phoneme[];
 };
 
-const sections: PhonemeSection[] = [
-  {
-    id: 'monophthongs',
-    eyebrow: '01 · VOWELS',
-    title: '单元音',
-    description: '发音过程中口型基本保持不变，先听清长短与舌位。',
-    kind: 'vowels',
-    phonemes: [
-      { ipa: 'iː', word: 'sheep', transcription: '/ʃiːp/', hint: '长“衣”音', family: '长元音' },
-      { ipa: 'ɪ', word: 'ship', transcription: '/ʃɪp/', hint: '短“衣”音', family: '短元音' },
-      { ipa: 'e', word: 'bed', transcription: '/bed/', hint: '短“诶”音', family: '短元音' },
-      { ipa: 'æ', word: 'cat', transcription: '/kæt/', hint: '嘴角展开', family: '短元音' },
-      { ipa: 'ɑː', word: 'car', transcription: '/kɑː/', hint: '长“啊”音', family: '长元音' },
-      { ipa: 'ɒ', word: 'hot', transcription: '/hɒt/', hint: '短“哦”音', family: '短元音' },
-      { ipa: 'ɔː', word: 'talk', transcription: '/tɔːk/', hint: '长“哦”音', family: '长元音' },
-      { ipa: 'ʊ', word: 'book', transcription: '/bʊk/', hint: '短“乌”音', family: '短元音' },
-      { ipa: 'uː', word: 'moon', transcription: '/muːn/', hint: '长“乌”音', family: '长元音' },
-      { ipa: 'ʌ', word: 'cup', transcription: '/kʌp/', hint: '短“啊”音', family: '短元音' },
-      { ipa: 'ɜː', word: 'bird', transcription: '/bɜːd/', hint: '舌位居中', family: '长元音' },
-      { ipa: 'ə', word: 'about', transcription: '/əˈbaʊt/', hint: '轻声央元音', family: '短元音' },
-    ],
-  },
-  {
-    id: 'diphthongs',
-    eyebrow: '02 · VOWEL GLIDES',
-    title: '双元音',
-    description: '由一个元音自然滑向另一个元音，注意口型移动要连贯。',
-    kind: 'vowels',
-    phonemes: [
-      { ipa: 'eɪ', word: 'face', transcription: '/feɪs/', hint: 'e 滑向 ɪ', family: '双元音' },
-      { ipa: 'aɪ', word: 'time', transcription: '/taɪm/', hint: 'a 滑向 ɪ', family: '双元音' },
-      { ipa: 'ɔɪ', word: 'boy', transcription: '/bɔɪ/', hint: 'ɔ 滑向 ɪ', family: '双元音' },
-      { ipa: 'əʊ', word: 'home', transcription: '/həʊm/', hint: 'ə 滑向 ʊ', family: '双元音' },
-      { ipa: 'aʊ', word: 'now', transcription: '/naʊ/', hint: 'a 滑向 ʊ', family: '双元音' },
-      { ipa: 'ɪə', word: 'near', transcription: '/nɪə/', hint: 'ɪ 滑向 ə', family: '双元音' },
-      { ipa: 'eə', word: 'hair', transcription: '/heə/', hint: 'e 滑向 ə', family: '双元音' },
-      { ipa: 'ʊə', word: 'tour', transcription: '/tʊə/', hint: 'ʊ 滑向 ə', family: '双元音' },
-    ],
-  },
-  {
-    id: 'consonants',
-    eyebrow: '03 · CONSONANTS',
-    title: '辅音',
-    description: '留意声带是否振动，以及气流在唇、齿和舌之间受到的阻碍。',
-    kind: 'consonants',
-    phonemes: [
-      { ipa: 'p', word: 'pen', transcription: '/pen/', hint: '双唇送气', family: '爆破音' },
-      { ipa: 'b', word: 'book', transcription: '/bʊk/', hint: '双唇振动', family: '爆破音' },
-      { ipa: 't', word: 'tea', transcription: '/tiː/', hint: '舌尖送气', family: '爆破音' },
-      { ipa: 'd', word: 'dog', transcription: '/dɒɡ/', hint: '舌尖振动', family: '爆破音' },
-      { ipa: 'k', word: 'key', transcription: '/kiː/', hint: '舌后送气', family: '爆破音' },
-      { ipa: 'ɡ', word: 'game', transcription: '/ɡeɪm/', hint: '舌后振动', family: '爆破音' },
-      { ipa: 'f', word: 'fish', transcription: '/fɪʃ/', hint: '上齿轻触下唇', family: '摩擦音' },
-      { ipa: 'v', word: 'voice', transcription: '/vɔɪs/', hint: '唇齿振动', family: '摩擦音' },
-      { ipa: 'θ', word: 'think', transcription: '/θɪŋk/', hint: '舌尖轻触齿间', family: '摩擦音' },
-      { ipa: 'ð', word: 'this', transcription: '/ðɪs/', hint: '齿间振动', family: '摩擦音' },
-      { ipa: 's', word: 'sun', transcription: '/sʌn/', hint: '清晰送气', family: '摩擦音' },
-      { ipa: 'z', word: 'zoo', transcription: '/zuː/', hint: '声带振动', family: '摩擦音' },
-      { ipa: 'ʃ', word: 'she', transcription: '/ʃiː/', hint: '类似“嘘”', family: '摩擦音' },
-      { ipa: 'ʒ', word: 'vision', transcription: '/ˈvɪʒən/', hint: 'ʃ 的浊音', family: '摩擦音' },
-      { ipa: 'h', word: 'hat', transcription: '/hæt/', hint: '喉部送气', family: '摩擦音' },
-      { ipa: 'r', word: 'red', transcription: '/red/', hint: '舌尖不触上颚', family: '摩擦音' },
-      { ipa: 'tʃ', word: 'chair', transcription: '/tʃeə/', hint: '类似“吃”', family: '破擦音' },
-      { ipa: 'dʒ', word: 'jump', transcription: '/dʒʌmp/', hint: '类似“知”', family: '破擦音' },
-      { ipa: 'tr', word: 'tree', transcription: '/triː/', hint: 't 与 r 连读', family: '破擦音' },
-      { ipa: 'dr', word: 'dream', transcription: '/driːm/', hint: 'd 与 r 连读', family: '破擦音' },
-      { ipa: 'ts', word: 'cats', transcription: '/kæts/', hint: '类似“次”', family: '破擦音' },
-      { ipa: 'dz', word: 'beds', transcription: '/bedz/', hint: 'ts 的浊音', family: '破擦音' },
-      { ipa: 'm', word: 'map', transcription: '/mæp/', hint: '双唇鼻音', family: '鼻音' },
-      { ipa: 'n', word: 'nose', transcription: '/nəʊz/', hint: '舌尖鼻音', family: '鼻音' },
-      { ipa: 'ŋ', word: 'sing', transcription: '/sɪŋ/', hint: '舌后鼻音', family: '鼻音' },
-      { ipa: 'l', word: 'leg', transcription: '/leɡ/', hint: '舌尖抵上齿龈', family: '舌边音' },
-      { ipa: 'j', word: 'yes', transcription: '/jes/', hint: '类似短“耶”', family: '半元音' },
-      { ipa: 'w', word: 'water', transcription: '/ˈwɔːtə/', hint: '双唇收圆', family: '半元音' },
-    ],
-  },
-];
+const sections = phonemeData as PhonemeSection[];
 ---
 
-<BaseLayout title="英语音标发音练习 · KiteAidan" description="48 个英语国际音标互动发音表，点击音标听示例词发音。">
+<BaseLayout title="英语音标发音练习 · KiteAidan" description="48 个英语国际音标互动发音表，点击音标听单独发音。">
   <main class="phonetics-page">
     <section class="phonetics-hero">
       <div class="sound-orbit" aria-hidden="true">
@@ -111,7 +38,7 @@ const sections: PhonemeSection[] = [
       <div class="hero-copy">
         <p class="kicker"><span></span> INTERACTIVE IPA LAB</p>
         <h1>听见每一个<br /><em>英语音标</em></h1>
-        <p class="hero-intro">48 个常用英语国际音标。点击任意卡片，听示例词、辨别口型，再开口模仿。</p>
+        <p class="hero-intro">48 个常用英语国际音标。点击任意卡片，直接听音标本身、辨别口型，再开口模仿。</p>
         <div class="hero-stats" aria-label="音标数量统计">
           <div><strong>20</strong><span>元音</span></div>
           <div><strong>28</strong><span>辅音</span></div>
@@ -146,8 +73,8 @@ const sections: PhonemeSection[] = [
         <label class="select-wrap">
           <span>语速</span>
           <select id="speed-select" aria-label="选择发音速度">
-            <option value="0.72">慢速</option>
-            <option value="0.92" selected>正常</option>
+            <option value="0.75">慢速</option>
+            <option value="1" selected>正常</option>
           </select>
         </label>
       </div>
@@ -169,9 +96,9 @@ const sections: PhonemeSection[] = [
               <button
                 class="phoneme-card"
                 type="button"
-                data-word={phoneme.word}
                 data-ipa={phoneme.ipa}
-                aria-label={`播放音标 ${phoneme.ipa}，示例词 ${phoneme.word}`}
+                data-audio-id={phoneme.id}
+                aria-label={`播放音标 ${phoneme.ipa}`}
               >
                 <span class="card-topline">
                   <span class="family">{phoneme.family}</span>
@@ -196,8 +123,8 @@ const sections: PhonemeSection[] = [
     <aside class="learning-note">
       <span class="note-number">TIP / 01</span>
       <div>
-        <h2>听音标，也要听它在单词里的样子</h2>
-        <p>孤立的音标容易失真，所以每次点击会播放一个包含目标音的示例词。先慢速听两遍，再跟读并录下自己的声音作比较。</p>
+        <h2>先听单独音标，再对照示例词</h2>
+        <p>卡片播放的是由 IPA 指定的独立音标；下方示例词帮助你理解它在真实单词中的位置。先慢速听两遍，再跟读并录下自己的声音作比较。</p>
       </div>
     </aside>
   </main>
@@ -209,58 +136,59 @@ const sections: PhonemeSection[] = [
     const cards = Array.from(document.querySelectorAll<HTMLButtonElement>('.phoneme-card'));
     const filterButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('.filter-button'));
     const sections = Array.from(document.querySelectorAll<HTMLElement>('.phoneme-section'));
-    let voices: SpeechSynthesisVoice[] = [];
     let activeCard: HTMLButtonElement | null = null;
-
-    const loadVoices = () => {
-      if ('speechSynthesis' in window) voices = window.speechSynthesis.getVoices();
-    };
-
-    loadVoices();
-    if ('speechSynthesis' in window) window.speechSynthesis.addEventListener('voiceschanged', loadVoices);
+    let activeAudio: HTMLAudioElement | null = null;
 
     const stopPlayback = () => {
-      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+      if (activeAudio) {
+        activeAudio.pause();
+        activeAudio.removeAttribute('src');
+        activeAudio = null;
+      }
       activeCard?.classList.remove('playing');
       activeCard = null;
     };
 
-    const speak = (card: HTMLButtonElement) => {
-      const word = card.dataset.word ?? '';
-      const ipa = card.dataset.ipa ?? '';
-
-      if (!('speechSynthesis' in window)) {
-        if (speechStatus) speechStatus.textContent = '当前浏览器不支持语音播放';
-        return;
-      }
-
-      stopPlayback();
-      const accent = accentSelect?.value ?? 'en-GB';
-      const utterance = new SpeechSynthesisUtterance(word);
-      utterance.lang = accent;
-      utterance.rate = Number(speedSelect?.value ?? 0.92);
-      const matchingVoices = voices.filter((voice) => voice.lang.toLowerCase().startsWith(accent.toLowerCase()));
-      const preferredVoice = matchingVoices.find((voice) => /natural|premium|google|samantha|daniel/i.test(voice.name));
-      utterance.voice = preferredVoice ?? matchingVoices[0] ?? null;
-
-      activeCard = card;
-      card.classList.add('playing');
-      if (speechStatus) speechStatus.textContent = `/${ipa}/ · ${word}`;
-
-      utterance.onend = () => {
-        card.classList.remove('playing');
-        if (activeCard === card) activeCard = null;
-      };
-      utterance.onerror = () => {
-        card.classList.remove('playing');
-        if (speechStatus) speechStatus.textContent = '播放失败，请检查设备声音设置';
-        if (activeCard === card) activeCard = null;
-      };
-
-      window.speechSynthesis.speak(utterance);
+    const finishPlayback = (card: HTMLButtonElement) => {
+      card.classList.remove('playing');
+      if (activeCard === card) activeCard = null;
     };
 
-    cards.forEach((card) => card.addEventListener('click', () => speak(card)));
+    const playPhoneme = (card: HTMLButtonElement) => {
+      const ipa = card.dataset.ipa ?? '';
+      const audioId = card.dataset.audioId ?? '';
+      stopPlayback();
+      const accent = accentSelect?.value ?? 'en-GB';
+      activeCard = card;
+      card.classList.add('playing');
+      if (speechStatus) speechStatus.textContent = `正在加载 /${ipa}/ · ${accent === 'en-GB' ? '英音' : '美音'}`;
+
+      const audio = new Audio(`/audio/phonetics/${accent}/${audioId}.mp3`);
+      let failed = false;
+      activeAudio = audio;
+      audio.preload = 'auto';
+      audio.playbackRate = Number(speedSelect?.value ?? 1);
+      audio.preservesPitch = true;
+      audio.onplaying = () => {
+        if (activeAudio === audio && speechStatus) speechStatus.textContent = `/${ipa}/ · ${accent === 'en-GB' ? '英音' : '美音'}`;
+      };
+      audio.onended = () => {
+        if (activeAudio === audio) activeAudio = null;
+        finishPlayback(card);
+      };
+      const showAudioError = () => {
+        if (failed || activeAudio !== audio) return;
+        failed = true;
+        audio.pause();
+        activeAudio = null;
+        finishPlayback(card);
+        if (speechStatus) speechStatus.textContent = `/${ipa}/ 音频不可用 · 请先运行音频生成命令`;
+      };
+      audio.onerror = showAudioError;
+      audio.play().catch(showAudioError);
+    };
+
+    cards.forEach((card) => card.addEventListener('click', () => playPhoneme(card)));
 
     filterButtons.forEach((button) => {
       button.addEventListener('click', () => {
