@@ -20,7 +20,7 @@ npm run preview
 
 ## 同步英语音标发音来源
 
-`/phonetics` 页面按需播放 [Wikimedia Commons](https://commons.wikimedia.org/) 的开放许可真人 IPA 示例（官方 MP3 转码）。不需要云服务账号、密钥或银行卡，也不会把一批大音频文件放进 Git 仓库。
+`/phonetics` 页面会先按需播放 [Wikimedia Commons](https://commons.wikimedia.org/) 的开放许可真人 IPA 示例（官方 MP3 转码），随后使用浏览器语音朗读卡片上的示例单词。不需要云服务账号、密钥或银行卡，也不会把一批大音频文件放进 Git 仓库。
 
 同步 48 个音标的播放地址、作者与许可证：
 

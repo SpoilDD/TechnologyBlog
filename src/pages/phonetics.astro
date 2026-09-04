@@ -47,7 +47,7 @@ const audioSources = phonemeAudioData as Record<string, AudioSource>;
       <div class="hero-copy">
         <p class="kicker"><span></span> INTERACTIVE IPA LAB</p>
         <h1>听见每一个<br /><em>英语音标</em></h1>
-        <p class="hero-intro">48 个常用英语国际音标。点击任意卡片，听 Wikimedia Commons 的真人 IPA 示例，辨别口型，再开口模仿。</p>
+        <p class="hero-intro">48 个常用英语国际音标。点击任意卡片，先听 Wikimedia Commons 的真人音素示例，再听浏览器朗读示例单词。</p>
         <div class="hero-stats" aria-label="音标数量统计">
           <div><strong>20</strong><span>元音</span></div>
           <div><strong>28</strong><span>辅音</span></div>
@@ -100,9 +100,10 @@ const audioSources = phonemeAudioData as Record<string, AudioSource>;
                 class="phoneme-card"
                 type="button"
                 data-ipa={phoneme.ipa}
+                data-word={phoneme.word}
                 data-audio-src={audioSources[phoneme.id].url}
                 data-sample-label={audioSources[phoneme.id].sample === 'word' ? `真人示例词 ${audioSources[phoneme.id].sampleLabel}` : '真人 IPA 示例'}
-                aria-label={`播放音标 ${phoneme.ipa}`}
+                aria-label={`播放音标 ${phoneme.ipa} 和示例词 ${phoneme.word}`}
               >
                 <span class="card-topline">
                   <span class="family">{phoneme.family}</span>
@@ -128,7 +129,7 @@ const audioSources = phonemeAudioData as Record<string, AudioSource>;
       <span class="note-number">TIP / 01</span>
       <div>
         <h2>先听单独音标，再对照示例词</h2>
-        <p>卡片优先播放 Wikimedia Commons 的真人 IPA 录音；Commons 暂无独立录音的少数双元音会播放含目标音的极短示例词。先慢速听两遍，再跟读并录下自己的声音作比较。</p>
+        <p>每次点击会先播放 Wikimedia Commons 的真人音素录音，结束后再用浏览器语音朗读卡片上的示例词。少数 Commons 暂无独立录音的双元音，会先播放含目标音的极短真人示例词。</p>
       </div>
     </aside>
   </main>
@@ -141,6 +142,7 @@ const audioSources = phonemeAudioData as Record<string, AudioSource>;
     const sections = Array.from(document.querySelectorAll<HTMLElement>('.phoneme-section'));
     let activeCard: HTMLButtonElement | null = null;
     let activeAudio: HTMLAudioElement | null = null;
+    let activeUtterance: SpeechSynthesisUtterance | null = null;
 
     const stopPlayback = () => {
       if (activeAudio) {
@@ -148,6 +150,8 @@ const audioSources = phonemeAudioData as Record<string, AudioSource>;
         activeAudio.removeAttribute('src');
         activeAudio = null;
       }
+      window.speechSynthesis?.cancel();
+      activeUtterance = null;
       activeCard?.classList.remove('playing');
       activeCard = null;
     };
@@ -157,8 +161,43 @@ const audioSources = phonemeAudioData as Record<string, AudioSource>;
       if (activeCard === card) activeCard = null;
     };
 
+    const speakExampleWord = (card: HTMLButtonElement, ipa: string, word: string) => {
+      if (!('speechSynthesis' in window) || !word) {
+        finishPlayback(card);
+        if (speechStatus) speechStatus.textContent = `/${ipa}/ 播放完成 · 当前浏览器不支持单词朗读`;
+        return;
+      }
+
+      const utterance = new SpeechSynthesisUtterance(word);
+      const voices = window.speechSynthesis.getVoices();
+      utterance.voice = voices.find((voice) => voice.lang.toLowerCase() === 'en-gb')
+        ?? voices.find((voice) => voice.lang.toLowerCase().startsWith('en'))
+        ?? null;
+      utterance.lang = utterance.voice?.lang ?? 'en-GB';
+      utterance.rate = Number(speedSelect?.value ?? 1);
+      utterance.pitch = 1;
+      activeUtterance = utterance;
+      utterance.onstart = () => {
+        if (activeUtterance === utterance && speechStatus) speechStatus.textContent = `${word} · 浏览器朗读示例词`;
+      };
+      utterance.onend = () => {
+        if (activeUtterance !== utterance) return;
+        activeUtterance = null;
+        finishPlayback(card);
+        if (speechStatus) speechStatus.textContent = `/${ipa}/ → ${word} · 播放完成`;
+      };
+      utterance.onerror = () => {
+        if (activeUtterance !== utterance) return;
+        activeUtterance = null;
+        finishPlayback(card);
+        if (speechStatus) speechStatus.textContent = `/${ipa}/ 已播放 · 示例词朗读失败`;
+      };
+      window.speechSynthesis.speak(utterance);
+    };
+
     const playPhoneme = (card: HTMLButtonElement) => {
       const ipa = card.dataset.ipa ?? '';
+      const word = card.dataset.word ?? '';
       const audioSrc = card.dataset.audioSrc ?? '';
       const sampleLabel = card.dataset.sampleLabel ?? '真人 IPA 示例';
       stopPlayback();
@@ -177,7 +216,7 @@ const audioSources = phonemeAudioData as Record<string, AudioSource>;
       };
       audio.onended = () => {
         if (activeAudio === audio) activeAudio = null;
-        finishPlayback(card);
+        if (activeCard === card) speakExampleWord(card, ipa, word);
       };
       const showAudioError = () => {
         if (failed || activeAudio !== audio) return;
