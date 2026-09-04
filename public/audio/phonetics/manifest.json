@@ -1,7 +1,7 @@
 {
   "provider": "Wikimedia Commons",
-  "syncedAt": "2026-09-04T03:29:12.221Z",
-  "delivery": "Wikimedia official MP3 transcodes, streamed on demand",
+  "syncedAt": "2026-09-04T06:37:22.433Z",
+  "delivery": "Wikimedia official MP3 transcodes for vowels; local short audio for consonants",
   "count": 48,
   "isolatedOrIpaSamples": 43,
   "shortWordSamples": 5,

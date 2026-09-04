@@ -103,7 +103,7 @@ const resolvedData = Object.fromEntries(files.map((file) => [file.id, {
 const manifest = {
   provider: 'Wikimedia Commons',
   syncedAt: new Date().toISOString(),
-  delivery: 'Wikimedia official MP3 transcodes, streamed on demand',
+  delivery: 'Wikimedia official MP3 transcodes for vowels; local short audio for consonants',
   count: files.length,
   isolatedOrIpaSamples: files.filter((file) => file.sample === 'ipa').length,
   shortWordSamples: files.filter((file) => file.sample === 'word').length,
@@ -132,7 +132,7 @@ const attributionHtml = `<!doctype html>
 </head>
 <body>
   <h1>英语音标音频来源与许可</h1>
-  <p class="note">全部音频由 Wikimedia Commons 官方 MP3 转码地址按需播放。每个文件遵循其说明页标注的独立许可证；本站未剪辑音频。少数没有独立录音的双元音使用极短真人示例词。</p>
+  <p class="note">元音音频由 Wikimedia Commons 官方 MP3 转码地址按需播放，每个文件遵循其说明页标注的独立许可证，本站未剪辑音频。辅音使用项目内原有的本地独立短音；下方仍保留全部 Wikimedia 映射供核对。少数没有独立录音的双元音使用极短真人示例词。</p>
   <ol>${attributionItems}</ol>
 </body>
 </html>\n`;
