@@ -1,7 +1,10 @@
-import { mkdir, readFile, rename, stat, writeFile } from 'node:fs/promises';
+import { execFile } from 'node:child_process';
+import { mkdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 
+const execFileAsync = promisify(execFile);
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const dataPath = path.join(rootDir, 'src', 'data', 'phonemes.json');
 const outputRoot = path.join(rootDir, 'public', 'audio', 'phonetics');
@@ -44,9 +47,19 @@ const sections = JSON.parse(await readFile(dataPath, 'utf8'));
 const phonemes = sections.flatMap((section) => section.phonemes);
 const accents = requestedAccent ? [requestedAccent] : supportedAccents;
 const voices = {
-  'en-GB': process.env.AZURE_SPEECH_VOICE_EN_GB || 'en-GB-SoniaNeural',
-  'en-US': process.env.AZURE_SPEECH_VOICE_EN_US || 'en-US-JennyNeural',
+  'en-GB': process.env.ESPEAK_VOICE_EN_GB || 'en-gb',
+  'en-US': process.env.ESPEAK_VOICE_EN_US || 'en-us',
 };
+const speed = Number(process.env.ESPEAK_SPEED || 120);
+const amplitude = Number(process.env.ESPEAK_AMPLITUDE || 170);
+
+if (!Number.isFinite(speed) || speed < 80 || speed > 450) {
+  throw new Error('ESPEAK_SPEED 必须是 80 到 450 之间的数字。');
+}
+
+if (!Number.isFinite(amplitude) || amplitude < 0 || amplitude > 200) {
+  throw new Error('ESPEAK_AMPLITUDE 必须是 0 到 200 之间的数字。');
+}
 
 const duplicateIds = phonemes
   .map((phoneme) => phoneme.id)
@@ -56,7 +69,7 @@ if (duplicateIds.length) throw new Error(`音标音频 ID 重复：${[...new Set
 
 for (const phoneme of phonemes) {
   for (const accent of supportedAccents) {
-    if (!phoneme.speech?.[accent]) throw new Error(`${phoneme.id} 缺少 ${accent} 的 IPA 映射。`);
+    if (!phoneme.espeak?.[accent]) throw new Error(`${phoneme.id} 缺少 ${accent} 的 eSpeak 音素映射。`);
   }
 }
 
@@ -65,93 +78,85 @@ const jobs = accents.flatMap((accent) =>
     accent,
     voice: voices[accent],
     phoneme,
-    outputPath: path.join(outputRoot, accent, `${phoneme.id}.mp3`),
+    outputPath: path.join(outputRoot, accent, `${phoneme.id}.wav`),
   })),
 );
 
 if (dryRun) {
-  console.log(`配置校验通过：${phonemes.length} 个音标，${jobs.length} 个音频任务。`);
+  console.log(`配置校验通过：${phonemes.length} 个音标，${jobs.length} 个离线音频任务。`);
   for (const accent of accents) console.log(`${accent}: ${voices[accent]} → public/audio/phonetics/${accent}/`);
   process.exit(0);
 }
 
-const speechKey = process.env.AZURE_SPEECH_KEY || process.env.SPEECH_KEY;
-const speechRegion = process.env.AZURE_SPEECH_REGION || process.env.SPEECH_REGION;
+const executableCandidates = [
+  process.env.ESPEAK_NG_PATH,
+  process.platform === 'win32' ? path.join(process.env.ProgramFiles || 'C:\\Program Files', 'eSpeak NG', 'espeak-ng.exe') : null,
+  process.platform === 'win32' ? path.join(process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)', 'eSpeak NG', 'espeak-ng.exe') : null,
+  'espeak-ng',
+  'espeak',
+].filter(Boolean);
 
-if (!speechKey || !speechRegion) {
+let executable;
+let version = '';
+
+for (const candidate of [...new Set(executableCandidates)]) {
+  try {
+    const result = await execFileAsync(candidate, ['--version'], { windowsHide: true, encoding: 'utf8' });
+    executable = candidate;
+    const firstLine = `${result.stdout || ''}${result.stderr || ''}`.trim().split(/\r?\n/)[0];
+    version = firstLine.split(/\s+Data at:/i)[0];
+    break;
+  } catch {
+    // Try the next common executable location.
+  }
+}
+
+if (!executable) {
   throw new Error(
-    '缺少 Azure Speech 凭据。请在 .env 中配置 AZURE_SPEECH_KEY 和 AZURE_SPEECH_REGION，或使用同名环境变量。',
+    '未找到 eSpeak NG。Windows 请先运行：winget install --id eSpeak-NG.eSpeak-NG --exact；也可以在 .env 中设置 ESPEAK_NG_PATH。',
   );
 }
 
-const endpoint = `https://${speechRegion}.tts.speech.microsoft.com/cognitiveservices/v1`;
-const outputFormat = 'audio-16khz-128kbitrate-mono-mp3';
-
-const escapeXml = (value) => String(value)
-  .replaceAll('&', '&amp;')
-  .replaceAll('<', '&lt;')
-  .replaceAll('>', '&gt;')
-  .replaceAll('"', '&quot;')
-  .replaceAll("'", '&apos;');
-
-const makeSsml = ({ accent, voice, phoneme }) => `<?xml version="1.0" encoding="UTF-8"?>
-<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="${escapeXml(accent)}">
-  <voice name="${escapeXml(voice)}">
-    <break time="180ms" />
-    <prosody rate="-15%"><phoneme alphabet="ipa" ph="${escapeXml(phoneme.speech[accent])}">${escapeXml(phoneme.word)}</phoneme></prosody>
-    <break time="260ms" />
-  </voice>
-</speak>`;
-
-const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+console.log(`使用 ${version || 'eSpeak NG'} 生成 WAV。`);
 
 const synthesize = async (job) => {
   if (!force) {
     try {
       const existing = await stat(job.outputPath);
-      if (existing.size > 256) return { status: 'skipped', job };
+      if (existing.size > 44) return { status: 'skipped', job };
     } catch (error) {
       if (error?.code !== 'ENOENT') throw error;
     }
   }
 
   await mkdir(path.dirname(job.outputPath), { recursive: true });
-  let lastError;
+  const temporaryPath = `${job.outputPath}.${process.pid}.tmp.wav`;
 
-  for (let attempt = 1; attempt <= 3; attempt += 1) {
-    try {
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Ocp-Apim-Subscription-Key': speechKey,
-          'Content-Type': 'application/ssml+xml',
-          'X-Microsoft-OutputFormat': outputFormat,
-          'User-Agent': 'KiteAidan-Phonetics-Generator',
-        },
-        body: makeSsml(job),
-      });
+  try {
+    await execFileAsync(
+      executable,
+      [
+        '-v', job.voice,
+        '-s', String(speed),
+        '-a', String(amplitude),
+        '-p', '50',
+        '-z',
+        '-w', temporaryPath,
+        `[[${job.phoneme.espeak[job.accent]}]]`,
+      ],
+      { windowsHide: true, encoding: 'utf8' },
+    );
 
-      if (!response.ok) {
-        const detail = (await response.text()).trim();
-        const error = new Error(`Azure Speech 返回 ${response.status}${detail ? `：${detail}` : ''}`);
-        error.retryable = response.status === 429 || response.status >= 500;
-        throw error;
-      }
-
-      const bytes = new Uint8Array(await response.arrayBuffer());
-      if (bytes.length <= 256) throw new Error('Azure Speech 返回的音频文件异常小。');
-      const temporaryPath = `${job.outputPath}.tmp`;
-      await writeFile(temporaryPath, bytes);
-      await rename(temporaryPath, job.outputPath);
-      return { status: 'generated', job, bytes: bytes.length };
-    } catch (error) {
-      lastError = error;
-      if (!error.retryable || attempt === 3) break;
-      await sleep(500 * (2 ** (attempt - 1)));
-    }
+    const generated = await stat(temporaryPath);
+    if (generated.size <= 44) throw new Error('eSpeak NG 返回的 WAV 文件为空。');
+    await rm(job.outputPath, { force: true });
+    await rename(temporaryPath, job.outputPath);
+    return { status: 'generated', job, bytes: generated.size };
+  } catch (error) {
+    await rm(temporaryPath, { force: true });
+    const detail = String(error?.stderr || error?.message || error).trim();
+    throw new Error(`${job.accent} /${job.phoneme.ipa}/ 生成失败：${detail}`);
   }
-
-  throw new Error(`${job.accent} /${job.phoneme.ipa}/ 生成失败：${lastError?.message || lastError}`);
 };
 
 const concurrency = 2;
@@ -172,9 +177,12 @@ const worker = async () => {
 await Promise.all(Array.from({ length: Math.min(concurrency, jobs.length) }, worker));
 
 const manifest = {
-  provider: 'Azure Speech',
+  provider: 'eSpeak NG (offline)',
   generatedAt: new Date().toISOString(),
-  outputFormat,
+  version,
+  outputFormat: 'WAV',
+  speed,
+  amplitude,
   accents: Object.fromEntries(accents.map((accent) => [accent, { voice: voices[accent], count: phonemes.length }])),
 };
 
@@ -182,4 +190,4 @@ await mkdir(outputRoot, { recursive: true });
 await writeFile(path.join(outputRoot, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
 
 const generatedCount = results.filter((result) => result.status === 'generated').length;
-console.log(`完成：生成 ${generatedCount} 个，复用 ${results.length - generatedCount} 个。`);
+console.log(`完成：生成 ${generatedCount} 个，复用 ${results.length - generatedCount} 个。无需云服务或银行卡。`);

@@ -5,7 +5,7 @@ import phonemeData from '../data/phonemes.json';
 type Phoneme = {
   id: string;
   ipa: string;
-  speech: Record<'en-GB' | 'en-US', string>;
+  espeak: Record<'en-GB' | 'en-US', string>;
   word: string;
   transcription: string;
   hint: string;
@@ -163,7 +163,7 @@ const sections = phonemeData as PhonemeSection[];
       card.classList.add('playing');
       if (speechStatus) speechStatus.textContent = `正在加载 /${ipa}/ · ${accent === 'en-GB' ? '英音' : '美音'}`;
 
-      const audio = new Audio(`/audio/phonetics/${accent}/${audioId}.mp3`);
+      const audio = new Audio(`/audio/phonetics/${accent}/${audioId}.wav`);
       let failed = false;
       activeAudio = audio;
       audio.preload = 'auto';

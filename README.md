@@ -20,11 +20,15 @@ npm run preview
 
 ## 生成英语音标发音
 
-`/phonetics` 页面优先播放 Azure Speech 根据 IPA 合成的独立音标 MP3。密钥只在本地生成阶段使用，不会发送到浏览器。
+`/phonetics` 页面播放 eSpeak NG 离线合成的独立音标 WAV。生成过程不需要云服务、账号、密钥或银行卡。
 
-1. 在 Azure 创建 Speech 资源。
-2. 复制 `.env.example` 为 `.env`，填写资源密钥与区域。
-3. 生成英音、美音两套音频：
+1. 安装开源的 [eSpeak NG](https://github.com/espeak-ng/espeak-ng)。Windows 可以直接运行：
+
+```bash
+winget install --id eSpeak-NG.eSpeak-NG --exact
+```
+
+2. 生成英音、美音两套音频：
 
 ```bash
 npm run audio:phonetics
@@ -36,14 +40,14 @@ npm run audio:phonetics
 npm run audio:phonetics -- --force
 ```
 
-也可以只生成一种口音，或在不调用 Azure 的情况下校验 48 个音标配置：
+也可以只生成一种口音，或只校验 48 个音标配置：
 
 ```bash
 npm run audio:phonetics -- --accent en-GB
 npm run audio:phonetics:check
 ```
 
-首次部署前可用 `npm run build:with-audio` 先生成音频再构建网站。常规部署建议提交生成后的 MP3，再继续使用 `npm run build`，避免每次部署重复调用 TTS。
+首次部署前可用 `npm run build:with-audio` 先生成音频再构建网站。常规部署建议提交生成后的 WAV，再继续使用 `npm run build`；服务器不需要安装 eSpeak NG。
 
 ## 项目结构
 
